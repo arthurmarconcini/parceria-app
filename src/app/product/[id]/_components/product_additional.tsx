@@ -1,8 +1,9 @@
 "use client";
 import { Button } from "@/app/_components/ui/button";
+import { Textarea } from "@/app/_components/ui/textarea";
 import currencyFormat from "@/app/_helpers/currency-format";
 import { Prisma } from "@prisma/client";
-import { MinusIcon, PlusIcon } from "lucide-react";
+import { MessageCircleMoreIcon, MinusIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 
 interface ProductAdditionalsProps {
@@ -26,6 +27,7 @@ const ProductAdditionals = ({ product }: ProductAdditionalsProps) => {
     )
   );
   const [quantity, setQuantity] = useState(1);
+  const [observations, setObservations] = useState("");
 
   const calculateTotal = () => {
     const total = product.Extras.reduce((acc, extra) => {
@@ -63,60 +65,87 @@ const ProductAdditionals = ({ product }: ProductAdditionalsProps) => {
     });
   };
 
+  const handleObservationsChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
+    if (e.target.value.length > 140) return;
+    setObservations(e.target.value);
+  };
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex-1">
-        <div className="bg-muted p-4">
-          <h1 className="text-sm">Deseja adicionar algum ingrediente?</h1>
-          <p className="text-xs text-muted-foreground">Escolha ate x opcoes</p>
+      <div className="w-full flex flex-col gap-4">
+        <div className="flex-1">
+          <div className="bg-muted p-4">
+            <h1 className="text-sm">Deseja adicionar algum ingrediente?</h1>
+            <p className="text-xs text-muted-foreground">
+              Escolha ate x opcoes
+            </p>
+          </div>
+          <div>
+            {product.Extras.map((extra) => (
+              <div
+                key={extra.id}
+                className="flex justify-between items-center p-4 border-b border-b-muted"
+              >
+                <div>
+                  <p className="text-sm font-semibold">{`Adicionar: ${extra.name}`}</p>
+                  <p className="text-xs text-muted-foreground">{`+ ${currencyFormat(
+                    extra.price
+                  )}`}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleExtraDecrement(extra.id)}
+                    disabled={extrasQuantities[extra.id] === 0}
+                  >
+                    <MinusIcon
+                      size={16}
+                      color={`${
+                        extrasQuantities[extra.id] > 0 ? "orange" : "gray"
+                      }`}
+                    />
+                  </Button>
+
+                  <span className="w-8 text-center">
+                    {extrasQuantities[extra.id]}
+                  </span>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleExtraIncrement(extra.id)}
+                    disabled={extrasQuantities[extra.id] === 10}
+                  >
+                    <PlusIcon
+                      size={16}
+                      color={`${
+                        extrasQuantities[extra.id] < 10 ? "orange" : "gray"
+                      }`}
+                    />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-        <div>
-          {product.Extras.map((extra) => (
-            <div
-              key={extra.id}
-              className="flex justify-between items-center p-4 border-b border-b-muted"
-            >
-              <div>
-                <p className="text-sm font-semibold">{`Adicionar: ${extra.name}`}</p>
-                <p className="text-xs text-muted-foreground">{`+ ${currencyFormat(
-                  extra.price
-                )}`}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleExtraDecrement(extra.id)}
-                  disabled={extrasQuantities[extra.id] === 0}
-                >
-                  <MinusIcon
-                    size={16}
-                    color={`${
-                      extrasQuantities[extra.id] > 0 ? "orange" : "gray"
-                    }`}
-                  />
-                </Button>
-
-                <span className="w-8 text-center">
-                  {extrasQuantities[extra.id]}
-                </span>
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleExtraIncrement(extra.id)}
-                  disabled={extrasQuantities[extra.id] === 10}
-                >
-                  <PlusIcon
-                    size={16}
-                    color={`${
-                      extrasQuantities[extra.id] < 10 ? "orange" : "gray"
-                    }`}
-                  />
-                </Button>
-              </div>
+        <div className="p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-2 items-center">
+              <MessageCircleMoreIcon size={16} />
+              <p className="text-sm">Alguma observação ?</p>
             </div>
-          ))}
+
+            <span className="text-sm">{`${observations.length} / 140`}</span>
+          </div>
+          <Textarea
+            className="text-sm text-muted-foreground focus-visible:ring-chart-5 focus-visible:border-chart-5 focus:border-chart-5"
+            placeholder="Ex: tirar a cebola, maionese a parte etc..."
+            value={observations}
+            onChange={(e) => handleObservationsChange(e)}
+          />
         </div>
       </div>
       <div className="fixed bottom-0 right-0 z-50 w-full bg-muted">

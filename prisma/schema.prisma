@@ -86,6 +86,7 @@ model OrderItem {
   priceAtTime Float // Preço no momento do pedido
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  observation String? // Observação do cliente
 
   order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product     Product      @relation(fields: [productId], references: [id])
