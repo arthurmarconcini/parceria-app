@@ -15,7 +15,7 @@ export default async function Home() {
         {categories.map((category) => (
           <div key={category.id} className="space-y-2">
             <h1 className="font-bold text-2xl">{category.name}</h1>
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               {category.products.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
