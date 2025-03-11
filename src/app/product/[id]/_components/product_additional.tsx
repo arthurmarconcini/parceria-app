@@ -2,6 +2,7 @@
 import { Button } from "@/app/_components/ui/button";
 import { Textarea } from "@/app/_components/ui/textarea";
 import currencyFormat from "@/app/_helpers/currency-format";
+import { CartItem, useCartStore } from "@/app/_hooks/cartStore";
 import { Prisma } from "@prisma/client";
 import { MessageCircleMoreIcon, MinusIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
@@ -28,6 +29,8 @@ const ProductAdditionals = ({ product }: ProductAdditionalsProps) => {
   );
   const [quantity, setQuantity] = useState(1);
   const [observations, setObservations] = useState("");
+
+  const { cart, addToCart } = useCartStore();
 
   const calculateTotal = () => {
     const total = product.Extras.reduce((acc, extra) => {
@@ -70,6 +73,34 @@ const ProductAdditionals = ({ product }: ProductAdditionalsProps) => {
   ) => {
     if (e.target.value.length > 140) return;
     setObservations(e.target.value);
+  };
+
+  const handleAddToCart = () => {
+    const cartItem: CartItem = {
+      productId: product.id,
+      quantity: quantity,
+      observation: observations,
+      priceAtTime: product.price,
+      orderExtras: product.Extras.filter(
+        (extra) => extrasQuantities[extra.id] > 0
+      ) // Filtra apenas extras com quantidade > 0
+        .map((extra) => ({
+          extraId: extra.id,
+          quantity: extrasQuantities[extra.id],
+          priceAtTime: extra.price,
+        })),
+    };
+
+    addToCart(cartItem);
+
+    console.log(cart);
+
+    // Reseta os valores após adicionar ao carrinho
+    setQuantity(1);
+    setExtrasQuantities(
+      product.Extras.reduce((acc, extra) => ({ ...acc, [extra.id]: 0 }), {})
+    );
+    setObservations(""); // Opcional: resetar as observações também
   };
 
   return (
@@ -162,9 +193,10 @@ const ProductAdditionals = ({ product }: ProductAdditionalsProps) => {
               +
             </Button>
           </div>
-          <Button className="flex-1">{`Adicionar ${currencyFormat(
-            calculateTotal()
-          )}`}</Button>
+          <Button
+            onClick={handleAddToCart}
+            className="flex-1"
+          >{`Adicionar ${currencyFormat(calculateTotal())}`}</Button>
         </div>
       </div>
     </div>
