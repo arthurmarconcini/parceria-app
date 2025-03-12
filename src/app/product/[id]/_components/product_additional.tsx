@@ -77,14 +77,17 @@ const ProductAdditionals = ({ product }: ProductAdditionalsProps) => {
 
   const handleAddToCart = () => {
     const cartItem: CartItem = {
+      name: product.name,
       productId: product.id,
       quantity: quantity,
+      imageUrl: product.imageUrl || "",
       observation: observations,
       priceAtTime: product.price,
       orderExtras: product.Extras.filter(
         (extra) => extrasQuantities[extra.id] > 0
       ) // Filtra apenas extras com quantidade > 0
         .map((extra) => ({
+          name: extra.name,
           extraId: extra.id,
           quantity: extrasQuantities[extra.id],
           priceAtTime: extra.price,

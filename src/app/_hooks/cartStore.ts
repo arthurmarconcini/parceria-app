@@ -2,14 +2,17 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 type Extra = {
+  name: string;
   extraId: string;
   quantity: number;
   priceAtTime: number;
 };
 
 export type CartItem = {
+  name: string;
   productId: string;
   quantity: number;
+  imageUrl: string;
   observation?: string;
   priceAtTime: number;
   orderExtras: Extra[];
