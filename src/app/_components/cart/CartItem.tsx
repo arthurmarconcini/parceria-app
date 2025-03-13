@@ -9,7 +9,7 @@ interface CartItemProps {
 
 const CartItem = ({ item }: CartItemProps) => {
   return (
-    <div className="p-4 flex justify-between items-center gap-4">
+    <div className="flex justify-between items-center gap-4">
       <div className="flex gap-2">
         <Image
           src={item.imageUrl}
@@ -27,7 +27,7 @@ const CartItem = ({ item }: CartItemProps) => {
         </div>
       </div>
       <div>
-        <QuantityButton quantity={item.quantity} />
+        <QuantityButton product={item} />
       </div>
     </div>
   );
