@@ -1,6 +1,5 @@
 "use client";
 
-import { Card } from "@/app/_components/ui/card";
 import currencyFormat from "@/app/_helpers/currency-format";
 import { Product } from "@prisma/client";
 import Image from "next/image";
@@ -13,22 +12,24 @@ interface ProductCardProps {
 const ProductCard = ({ product }: ProductCardProps) => {
   return (
     <Link href={`/product/${product.id}`}>
-      <Card key={product.id} className="flex flex-row p-4">
-        <div className="flex-1">
-          <h1 className="text-lg">{product.name}</h1>
-          <span>{currencyFormat(product.price)}</span>
-        </div>
+      <div key={product.id} className="flex flex-col space-y-1">
         <Image
           src={
             product.imageUrl ||
-            `https://img.freepik.com/psd-gratuitas/modelo-de-midia-social-de-hamburguer-quente-e-picante_505751-2886.jpg?t=st=1741020839~exp=1741024439~hmac=066195a75d87fd588f3d2ff7fe7f4f25546e4a76e51c713e79a9bcc60faf7c01&w=740`
+            `https://img.freepik.com/fotos-gratis/hamburguer-enorme-com-carne-frita-e-legumes_140725-971.jpg?t=st=1741906423~exp=1741910023~hmac=8deb415adc07a586802503a9495897ab95e9a69926ae5b99d6bb6a2584ccd2d5&w=740`
           }
           alt={product.name}
-          width={48}
-          height={48}
-          className="rounded-sm object-contain"
+          width={110}
+          height={110}
+          className="rounded-md object-contain"
         />
-      </Card>
+        <div>
+          <h1 className="font-semibold text-sm">{product.name}</h1>
+          <p className="text-xs text-muted-foreground">
+            {currencyFormat(product.price)}
+          </p>
+        </div>
+      </div>
     </Link>
   );
 };

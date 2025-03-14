@@ -1,0 +1,22 @@
+import { ScrollArea, ScrollBar } from "@/app/_components/ui/scroll-area";
+import { Product } from "@prisma/client";
+import ProductCard from "./ProductCard";
+
+interface ProductListProps {
+  products: Product[];
+}
+
+const ProductList = ({ products }: ProductListProps) => {
+  return (
+    <ScrollArea className="">
+      <div className="flex w-max space-x-2 px-4">
+        {products.map((product) => (
+          <ProductCard key={product.id} product={product} />
+        ))}
+      </div>
+      <ScrollBar orientation="horizontal" />
+    </ScrollArea>
+  );
+};
+
+export default ProductList;
