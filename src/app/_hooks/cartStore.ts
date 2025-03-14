@@ -27,6 +27,7 @@ type CartState = {
   decreaseQuantity: (item: CartItem) => void;
   increaseQuantity: (item: CartItem) => void;
   removeFromCart: (item: CartItem) => void;
+  getTotalPrice: () => number;
 };
 
 // Função auxiliar para comparar dois arrays de extras
@@ -53,7 +54,7 @@ const areItemsEqual = (item1: CartItem, item2: CartItem): boolean => {
 
 export const useCartStore = create<CartState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       cart: [],
       addToCart: (item: CartItem) =>
         set((state) => {
@@ -119,6 +120,19 @@ export const useCartStore = create<CartState>()(
         set((state) => ({
           cart: state.cart.filter((cartItem) => !areItemsEqual(item, cartItem)),
         }));
+      },
+      getTotalPrice: () => {
+        const state = get();
+
+        return state.cart.reduce((total, item) => {
+          // Calcula o preço total dos extras
+          const extrasTotal = item.orderExtras.reduce((total, extra) => {
+            return total + extra.priceAtTime * extra.quantity;
+          }, 0);
+
+          // Calcula o preço total do item com base na quantidade e no preço unitário
+          return total + (item.priceAtTime + extrasTotal) * item.quantity;
+        }, 0);
       },
     }),
 

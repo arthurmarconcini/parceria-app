@@ -11,9 +11,11 @@ import {
   SheetTrigger,
 } from "../ui/sheet";
 import { ScrollArea } from "../ui/scroll-area";
+import currencyFormat from "@/app/_helpers/currency-format";
 
 const Cart = () => {
-  const { cart, clearCart, isCartOpen, toggleCart } = useCartStore();
+  const { cart, clearCart, isCartOpen, toggleCart, getTotalPrice } =
+    useCartStore();
 
   return (
     <Sheet open={isCartOpen} onOpenChange={toggleCart}>
@@ -55,15 +57,15 @@ const Cart = () => {
           <div className="flex flex-col gap-2">
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>Subtotal</span>
-              <span>R$ 100,00</span>
+              <span>{currencyFormat(getTotalPrice())}</span>
             </div>
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>Taxa de entrega</span>
-              <span>R$ 10,00</span>
+              <span>R$ 0,00</span>
             </div>
             <div className="flex justify-between text-xs font-bold">
               <span>Total</span>
-              <span>R$ 110,00</span>
+              <span>{currencyFormat(getTotalPrice())}</span>
             </div>
           </div>
         </div>

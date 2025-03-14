@@ -2,6 +2,7 @@ import { db } from "@/app/_lib/prisma";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import ProductAdditionals from "./_components/product_additional";
+import currencyFormat from "@/app/_helpers/currency-format";
 
 interface ProductProps {
   params: Promise<{ id: string }>;
@@ -25,7 +26,7 @@ const Product = async ({ params }: ProductProps) => {
 
   return (
     <div>
-      <div className="flex gap-4 justify-between items-center p-4">
+      <div className="flex gap-4 justify-between p-4">
         <Image
           src={
             product.imageUrl ||
@@ -37,10 +38,12 @@ const Product = async ({ params }: ProductProps) => {
           className="object-contain rounded-sm"
         />
         <div className="flex-1">
-          <h1 className="text-lg font-bold ">{product.name}</h1>
-          <h2 className=" ">Pao, carne, queijo e salada</h2>
+          <h1 className="">{product.name}</h1>
+          <h2 className="text-sm">Pao, carne, queijo e salada</h2>
 
-          <span>{product.price}</span>
+          <p className="text-xs text-muted-foreground">
+            {currencyFormat(product.price)}
+          </p>
         </div>
       </div>
       <ProductAdditionals product={product} />

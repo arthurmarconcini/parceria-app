@@ -8,6 +8,11 @@ interface CartItemProps {
 }
 
 const CartItem = ({ item }: CartItemProps) => {
+  const extrasTotal = item.orderExtras.reduce((total, extra) => {
+    return total + extra.priceAtTime * extra.quantity;
+  }, 0);
+  const itemTotal = (item.priceAtTime + extrasTotal) * item.quantity;
+
   return (
     <div className="flex justify-between items-center gap-4">
       <div className="flex gap-2">
@@ -22,7 +27,7 @@ const CartItem = ({ item }: CartItemProps) => {
         <div>
           <h1 className="font-bold text-sm">{item.name}</h1>
           <span className="text-xs text-muted-foreground">
-            {currencyFormat(item.priceAtTime)}
+            {currencyFormat(itemTotal)}
           </span>
         </div>
       </div>
