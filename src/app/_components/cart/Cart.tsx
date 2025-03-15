@@ -12,6 +12,7 @@ import {
 } from "../ui/sheet";
 import { ScrollArea } from "../ui/scroll-area";
 import currencyFormat from "@/app/_helpers/currency-format";
+import { ShoppingCartIcon } from "lucide-react";
 
 const Cart = () => {
   const { cart, clearCart, isCartOpen, toggleCart, getTotalPrice } =
@@ -20,7 +21,19 @@ const Cart = () => {
   return (
     <Sheet open={isCartOpen} onOpenChange={toggleCart}>
       <SheetTrigger asChild>
-        <Button className="text-white">CARRINHO</Button>
+        <Button className="text-white relative">
+          {cart.length > 0 && (
+            <div className="absolute bg-white text-black flex justify-center items-center rounded-full -bottom-1 -left-0.5 size-6">
+              <p>
+                {cart.reduce((total, item) => {
+                  return total + item.quantity;
+                }, 0)}
+              </p>
+            </div>
+          )}
+
+          <ShoppingCartIcon className="size-6" />
+        </Button>
       </SheetTrigger>
       <SheetContent className="flex flex-col h-full p-0 overflow-hidden">
         <SheetHeader>
@@ -52,6 +65,7 @@ const Cart = () => {
             </ScrollArea>
           </div>
         )}
+
         <div className="p-4 flex flex-col gap-4">
           <h1 className="text-sm font-bold">Resumo de valores</h1>
           <div className="flex flex-col gap-2">
@@ -68,6 +82,9 @@ const Cart = () => {
               <span>{currencyFormat(getTotalPrice())}</span>
             </div>
           </div>
+        </div>
+        <div className="p-4">
+          <Button className="w-full">Finalizar compra</Button>
         </div>
       </SheetContent>
     </Sheet>
