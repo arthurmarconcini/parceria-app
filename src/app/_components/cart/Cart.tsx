@@ -13,11 +13,27 @@ import {
 import { ScrollArea } from "../ui/scroll-area";
 import currencyFormat from "@/app/_helpers/currency-format";
 import { ShoppingCartIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 const Cart = () => {
   const { cart, clearCart, isCartOpen, toggleCart, getTotalPrice } =
     useCartStore();
 
+  const { status } = useSession();
+
+  const router = useRouter();
+
+  function handleCheckout() {
+    toggleCart();
+
+    if (status !== "authenticated") {
+      router.push("/login");
+      return;
+    }
+
+    router.push("/checkout");
+  }
   return (
     <Sheet open={isCartOpen} onOpenChange={toggleCart}>
       <SheetTrigger asChild>
@@ -84,7 +100,9 @@ const Cart = () => {
           </div>
         </div>
         <div className="p-4">
-          <Button className="w-full">Finalizar compra</Button>
+          <Button onClick={handleCheckout} className="w-full">
+            Finalizar compra
+          </Button>
         </div>
       </SheetContent>
     </Sheet>
