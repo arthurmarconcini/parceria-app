@@ -64,5 +64,5 @@ export const authOptions = {
 };
 
 // Exporta os handlers corretamente para NextAuth v5
-export const { handlers } = NextAuth(authOptions as NextAuthConfig);
+export const { handlers, auth } = NextAuth(authOptions as NextAuthConfig);
 export const { GET, POST } = handlers;

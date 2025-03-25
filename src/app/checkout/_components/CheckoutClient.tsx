@@ -9,20 +9,12 @@ import {
 } from "@/app/_components/ui/card";
 import { Label } from "@/app/_components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/app/_components/ui/radio-group";
+import currencyFormat from "@/app/_helpers/currency-format";
 import { useCartStore } from "@/app/_hooks/cartStore";
+import { Address } from "@prisma/client";
 
 // Ajuste o caminho para seu hook
 import { useRouter } from "next/navigation";
-
-type Address = {
-  id: string;
-  street: string;
-  number: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  isDefault: boolean;
-};
 
 type CheckoutClientProps = {
   addresses: Address[];
@@ -64,14 +56,34 @@ export default function CheckoutClient({ addresses }: CheckoutClientProps) {
             <p>Carrinho vazio</p>
           ) : (
             <>
-              <ul>
+              <ul className="space-y-1">
                 {cart.map((item) => (
-                  <li key={item.productId} className="flex justify-between">
-                    <span>
-                      {item.name} (x{item.quantity})
-                    </span>
-                    <span>
-                      R$ {(item.priceAtTime * item.quantity).toFixed(2)}
+                  <li
+                    key={item.cartItemId}
+                    className="flex flex-col justify-between"
+                  >
+                    <div className="flex justify-between">
+                      <span>
+                        {item.name} (x{item.quantity})
+                      </span>
+                      <span>
+                        {currencyFormat(
+                          (item.priceAtTime +
+                            item.orderExtras.reduce((total, item) => {
+                              return total + item.priceAtTime * item.quantity;
+                            }, 0)) *
+                            item.quantity
+                        )}
+                      </span>
+                    </div>
+
+                    <span className="text-sm text-muted-foreground ml-2">
+                      {item.orderExtras.map((extra, index) => (
+                        <span key={index}>
+                          {extra.name + `(x${extra.quantity})`}
+                          {index < item.orderExtras.length - 1 ? ", " : ""}
+                        </span>
+                      ))}
                     </span>
                   </li>
                 ))}
@@ -91,11 +103,13 @@ export default function CheckoutClient({ addresses }: CheckoutClientProps) {
           <RadioGroup defaultValue="pix" name="paymentMethod">
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="pix" id="pix" />
-              <Label htmlFor="pix">Pix</Label>
+              <Label htmlFor="pix">Pix na maquininha</Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="credit_card" id="credit_card" />
-              <Label htmlFor="credit_card">Cartão de Crédito</Label>
+              <Label htmlFor="credit_card">
+                Cartão de Crédito ou Debito na maquininha
+              </Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="cash" id="cash" />
@@ -112,7 +126,11 @@ export default function CheckoutClient({ addresses }: CheckoutClientProps) {
           name="addressId"
           value={addresses.find((a) => a.isDefault)?.id || addresses[0]?.id}
         />
-        <Button type="submit" className="w-full" disabled={cart.length === 0}>
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={cart.length === 0 || addresses.length === 0}
+        >
           Finalizar Pedido
         </Button>
       </form>
