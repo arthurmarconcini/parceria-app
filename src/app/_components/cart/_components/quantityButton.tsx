@@ -13,7 +13,7 @@ const QuantityButton = ({ product }: QuantityButtonProps) => {
     <div className="rounded-md flex gap-2 items-center bg-neutral-100 ">
       {product.quantity === 1 ? (
         <Button
-          onClick={() => removeFromCart(product)}
+          onClick={() => removeFromCart(product.cartItemId)}
           size="icon"
           variant="ghost"
           className="text-destructive"
@@ -22,7 +22,7 @@ const QuantityButton = ({ product }: QuantityButtonProps) => {
         </Button>
       ) : (
         <Button
-          onClick={() => decreaseQuantity(product)}
+          onClick={() => decreaseQuantity(product.cartItemId)}
           size="icon"
           variant="ghost"
           className="text-chart-5"
@@ -33,7 +33,7 @@ const QuantityButton = ({ product }: QuantityButtonProps) => {
       <div className="text-sm w-3 text-center">{product.quantity}</div>
 
       <Button
-        onClick={() => increaseQuantity(product)}
+        onClick={() => increaseQuantity(product.cartItemId)}
         size="icon"
         variant="ghost"
         className="text-chart-5 "

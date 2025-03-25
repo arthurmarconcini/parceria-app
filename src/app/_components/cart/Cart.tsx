@@ -74,8 +74,8 @@ const Cart = () => {
             </div>
             <ScrollArea className="max-h-[calc(100vh-250px)]">
               <div className="p-4 flex flex-col gap-4">
-                {cart.map((item, i) => (
-                  <CartItem key={i} item={item} />
+                {cart.map((item) => (
+                  <CartItem key={item.cartItemId} item={item} />
                 ))}
               </div>
             </ScrollArea>

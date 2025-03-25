@@ -11,6 +11,7 @@ type Extra = {
 export type CartItem = {
   name: string;
   productId: string;
+  cartItemId: string;
   quantity: number;
   imageUrl: string;
   observation?: string;
@@ -20,15 +21,18 @@ export type CartItem = {
 
 type CartState = {
   cart: CartItem[];
-  addToCart: (item: CartItem) => void;
+  addToCart: (item: Omit<CartItem, "cartItemId">) => void;
   clearCart: () => void;
   isCartOpen: boolean;
   toggleCart: () => void;
-  decreaseQuantity: (item: CartItem) => void;
-  increaseQuantity: (item: CartItem) => void;
-  removeFromCart: (item: CartItem) => void;
+  decreaseQuantity: (cartItemId: string) => void;
+  increaseQuantity: (cartItemId: string) => void;
+  removeFromCart: (cartItemId: string) => void;
   getTotalPrice: () => number;
 };
+
+const generateUniqueId = () =>
+  `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
 // Função auxiliar para comparar dois arrays de extras
 const areExtrasEqual = (extras1: Extra[], extras2: Extra[]): boolean => {
@@ -44,36 +48,21 @@ const areExtrasEqual = (extras1: Extra[], extras2: Extra[]): boolean => {
 };
 
 // Função auxiliar para comparar dois itens do carrinho
-const areItemsEqual = (item1: CartItem, item2: CartItem): boolean => {
-  return (
-    item1.productId === item2.productId &&
-    areExtrasEqual(item1.orderExtras, item2.orderExtras) &&
-    (item1.observation || "") === (item2.observation || "")
-  );
-};
 
 export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       cart: [],
-      addToCart: (item: CartItem) =>
+      addToCart: (item: Omit<CartItem, "cartItemId">) =>
         set((state) => {
           const existingItem = state.cart.find((cartItem) => {
-            // Verifica se o productId é o mesmo
             const sameProduct = cartItem.productId === item.productId;
-            if (!sameProduct) return false;
-
-            // Verifica se os extras são iguais
             const sameExtras = areExtrasEqual(
               cartItem.orderExtras,
               item.orderExtras
             );
-
-            // Verifica se as observações são iguais (considerando undefined como "")
             const sameObservation =
               (cartItem.observation || "") === (item.observation || "");
-
-            // Retorna true apenas se produto, extras e observações forem iguais
             return sameProduct && sameExtras && sameObservation;
           });
 
@@ -81,9 +70,7 @@ export const useCartStore = create<CartState>()(
             console.log("Item idêntico encontrado, incrementando quantidade");
             return {
               cart: state.cart.map((cartItem) =>
-                cartItem.productId === item.productId &&
-                areExtrasEqual(cartItem.orderExtras, item.orderExtras) &&
-                (cartItem.observation || "") === (item.observation || "")
+                cartItem.cartItemId === existingItem.cartItemId
                   ? { ...cartItem, quantity: cartItem.quantity + item.quantity }
                   : cartItem
               ),
@@ -92,35 +79,37 @@ export const useCartStore = create<CartState>()(
           }
 
           console.log("Item diferente, adicionando como novo");
+          const newItem = { ...item, cartItemId: generateUniqueId() };
           return {
-            cart: [...state.cart, item],
+            cart: [...state.cart, newItem],
             isCartOpen: true,
           };
         }),
       clearCart: () => set({ cart: [], isCartOpen: false }),
       isCartOpen: false,
       toggleCart: () => set((state) => ({ isCartOpen: !state.isCartOpen })),
-      decreaseQuantity: (item: CartItem) =>
+      decreaseQuantity: (cartItemId: string) =>
         set((state) => ({
           cart: state.cart.map((cartItem) =>
-            areItemsEqual(cartItem, item) && cartItem.quantity > 1
+            cartItem.cartItemId === cartItemId && cartItem.quantity > 1
               ? { ...cartItem, quantity: cartItem.quantity - 1 }
               : cartItem
           ),
         })),
-      increaseQuantity: (item: CartItem) =>
+      increaseQuantity: (cartItemId: string) =>
         set((state) => ({
           cart: state.cart.map((cartItem) =>
-            areItemsEqual(cartItem, item) && cartItem.quantity < 10
+            cartItem.cartItemId === cartItemId && cartItem.quantity < 10
               ? { ...cartItem, quantity: cartItem.quantity + 1 }
               : cartItem
           ),
         })),
-      removeFromCart: (item: CartItem) => {
+      removeFromCart: (cartItemId: string) =>
         set((state) => ({
-          cart: state.cart.filter((cartItem) => !areItemsEqual(item, cartItem)),
-        }));
-      },
+          cart: state.cart.filter(
+            (cartItem) => cartItem.cartItemId !== cartItemId
+          ),
+        })),
       getTotalPrice: () => {
         const state = get();
 
