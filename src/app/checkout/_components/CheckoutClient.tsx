@@ -7,45 +7,155 @@ import {
   CardHeader,
   CardTitle,
 } from "@/app/_components/ui/card";
+import { Checkbox } from "@/app/_components/ui/checkbox";
+import { Input } from "@/app/_components/ui/input";
 import { Label } from "@/app/_components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/app/_components/ui/radio-group";
 import currencyFormat from "@/app/_helpers/currency-format";
 import { useCartStore } from "@/app/_hooks/cartStore";
-import { Address } from "@prisma/client";
-
-// Ajuste o caminho para seu hook
+import { Address, PaymentMethod } from "@prisma/client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 type CheckoutClientProps = {
   addresses: Address[];
+  userId: string | undefined;
 };
 
-export default function CheckoutClient({ addresses }: CheckoutClientProps) {
-  const { cart, getTotalPrice, clearCart } = useCartStore(); // Usando seu hook
+export default function CheckoutClient({
+  addresses,
+  userId,
+}: CheckoutClientProps) {
+  const { cart, getTotalPrice, clearCart } = useCartStore();
   const total = getTotalPrice();
   const router = useRouter();
 
-  const handleSubmit = async (formData: FormData) => {
-    const addressId = formData.get("addressId") as string;
-    const paymentMethod = formData.get("paymentMethod") as string;
+  const [selectedAddress, setSelectedAddress] = useState<string | null>(
+    addresses.find((a) => a.isDefault)?.id || null
+  );
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("PIX");
+  const [requiresChange, setRequiresChange] = useState<boolean>(false);
+  const [changeFor, setChangeFor] = useState<number | null>(null);
 
-    // Simulação de envio do pedido
-    console.log("Pedido fictício criado:", {
-      addressId,
-      paymentMethod,
+  const handleAddressChange = (value: string) => {
+    setSelectedAddress(value);
+  };
+
+  const handlePaymentMethodChange = (value: PaymentMethod) => {
+    setPaymentMethod(value);
+    if (value !== "CASH") {
+      setRequiresChange(false);
+      setChangeFor(null);
+    }
+  };
+
+  const handleRequiresChange = (checked: boolean) => {
+    setRequiresChange(checked);
+    if (!checked) {
+      setChangeFor(null);
+    }
+  };
+
+  const handleChangeForChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.target.value);
+    setChangeFor(isNaN(value) || value <= 0 ? null : value);
+  };
+
+  const handleSubmit = async () => {
+    if (!userId) {
+      alert("Usuário não autenticado.");
+      return;
+    }
+
+    if (!selectedAddress) {
+      alert("Por favor, selecione um endereço.");
+      return;
+    }
+
+    if (cart.length === 0) {
+      alert("O carrinho está vazio.");
+      return;
+    }
+
+    if (
+      paymentMethod === "CASH" &&
+      requiresChange &&
+      (!changeFor || changeFor <= total)
+    ) {
+      alert(
+        "Por favor, informe um valor válido para o troco maior que o total."
+      );
+      return;
+    }
+
+    const orderData = {
+      userId,
+      addressId: selectedAddress,
       total,
-      items: cart,
-    });
+      paymentMethod,
+      requiresChange: paymentMethod === "CASH" ? requiresChange : null,
+      changeFor: paymentMethod === "CASH" && requiresChange ? changeFor : null,
+      items: cart.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        priceAtTime: item.priceAtTime,
+        observation: item.observation || null,
+      })),
+    };
 
-    // Limpa o carrinho após o pedido
-    clearCart();
+    try {
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderData),
+      });
 
-    // Redireciona para confirmação
-    router.push("/order-confirmation");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erro ao criar pedido.");
+      }
+
+      clearCart();
+      router.push("/order-confirmation");
+    } catch (error) {
+      console.error("Erro ao finalizar pedido:", error);
+      alert("Erro ao finalizar pedido. Tente novamente.");
+    }
   };
 
   return (
     <>
+      {/* Seção de Endereços */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Endereço de Entrega</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {addresses.length === 0 ? (
+            <p>Nenhum endereço cadastrado.</p>
+          ) : (
+            <RadioGroup
+              value={selectedAddress || undefined}
+              onValueChange={handleAddressChange}
+            >
+              {addresses.map((address) => (
+                <div key={address.id} className="flex items-center space-x-2">
+                  <RadioGroupItem value={address.id} id={address.id} />
+                  <Label htmlFor={address.id}>
+                    {address.street}, {address.number} - {address.city || ""},{" "}
+                    {address.state || ""} ({address.zipCode})
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          )}
+          <Button variant="outline" className="mt-4" asChild>
+            <Link href="/checkout/add-address">Adicionar Novo Endereço</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Resumo do Pedido */}
       <Card className="mb-6">
         <CardHeader>
@@ -69,26 +179,27 @@ export default function CheckoutClient({ addresses }: CheckoutClientProps) {
                       <span>
                         {currencyFormat(
                           (item.priceAtTime +
-                            item.orderExtras.reduce((total, item) => {
-                              return total + item.priceAtTime * item.quantity;
+                            item.orderExtras.reduce((total, extra) => {
+                              return total + extra.priceAtTime * extra.quantity;
                             }, 0)) *
                             item.quantity
                         )}
                       </span>
                     </div>
-
-                    <span className="text-sm text-muted-foreground ml-2">
-                      {item.orderExtras.map((extra, index) => (
-                        <span key={index}>
-                          {extra.name + `(x${extra.quantity})`}
-                          {index < item.orderExtras.length - 1 ? ", " : ""}
-                        </span>
-                      ))}
-                    </span>
+                    {item.orderExtras.length > 0 && (
+                      <span className="text-sm text-muted-foreground ml-2">
+                        {item.orderExtras.map((extra, index) => (
+                          <span key={index}>
+                            {extra.name} (x{extra.quantity})
+                            {index < item.orderExtras.length - 1 ? ", " : ""}
+                          </span>
+                        ))}
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
-              <p className="mt-4 font-bold">Total: R$ {total.toFixed(2)}</p>
+              <p className="mt-4 font-bold">Total: {currencyFormat(total)}</p>
             </>
           )}
         </CardContent>
@@ -100,40 +211,70 @@ export default function CheckoutClient({ addresses }: CheckoutClientProps) {
           <CardTitle>Forma de Pagamento</CardTitle>
         </CardHeader>
         <CardContent>
-          <RadioGroup defaultValue="pix" name="paymentMethod">
+          <RadioGroup
+            value={paymentMethod}
+            onValueChange={handlePaymentMethodChange}
+          >
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="pix" id="pix" />
-              <Label htmlFor="pix">Pix na maquininha</Label>
+              <RadioGroupItem value="PIX" id="pix" />
+              <Label htmlFor="pix">Pix</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="credit_card" id="credit_card" />
-              <Label htmlFor="credit_card">
-                Cartão de Crédito ou Debito na maquininha
-              </Label>
+              <RadioGroupItem value="CREDIT_CARD" id="credit_card" />
+              <Label htmlFor="credit_card">Cartão de Crédito</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="cash" id="cash" />
+              <RadioGroupItem value="DEBIT_CARD" id="debit_card" />
+              <Label htmlFor="debit_card">Cartão de Débito</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="CASH" id="cash" />
               <Label htmlFor="cash">Dinheiro na Entrega</Label>
             </div>
           </RadioGroup>
+          {paymentMethod === "CASH" && (
+            <div className="mt-4 ml-2 flex flex-col gap-2">
+              <div className="flex gap-2 items-center">
+                <Checkbox
+                  id="require_change"
+                  checked={requiresChange}
+                  onCheckedChange={handleRequiresChange}
+                />
+                <Label htmlFor="require_change">Precisa de troco?</Label>
+              </div>
+              {requiresChange && (
+                <div className="gap-2 flex flex-col">
+                  <Label htmlFor="change">Troco para quanto? (R$)</Label>
+                  <Input
+                    value={changeFor ?? ""}
+                    onChange={handleChangeForChange}
+                    type="number"
+                    step="0.01"
+                    min={total + 0.01} // Garante que o troco seja maior que o total
+                    id="change"
+                    placeholder={`Ex.: ${(total + 10).toFixed(2)}`}
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Botão de Finalizar */}
-      <form action={handleSubmit}>
-        <input
-          type="hidden"
-          name="addressId"
-          value={addresses.find((a) => a.isDefault)?.id || addresses[0]?.id}
-        />
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={cart.length === 0 || addresses.length === 0}
-        >
-          Finalizar Pedido
-        </Button>
-      </form>
+      <Button
+        onClick={handleSubmit}
+        className="w-full"
+        disabled={
+          cart.length === 0 ||
+          !selectedAddress ||
+          (paymentMethod === "CASH" &&
+            requiresChange &&
+            (!changeFor || changeFor <= total))
+        }
+      >
+        Finalizar Pedido
+      </Button>
     </>
   );
 }

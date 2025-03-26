@@ -85,17 +85,27 @@ model Address {
 }
 
 model Order {
-  id        String   @id @default(uuid())
-  userId    String
-  addressId String
-  total     Float
-  status    Status   @default(PENDING) // Ex.: "pending", "delivered", "canceled"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String        @id @default(uuid())
+  userId         String
+  addressId      String
+  total          Float
+  status         Status        @default(PENDING) // Ex.: "pending", "delivered", "canceled"
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  paymentMethod  PaymentMethod // Novo campo: método de pagamento
+  requiresChange Boolean? // Novo campo: precisa de troco? (null se não for CASH) 
+  changeFor      Float? // Novo campo: quanto de troco? (null se não for CASH)
 
   user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   address Address     @relation(fields: [addressId], references: [id])
   items   OrderItem[] // Itens do pedido
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  PIX
+  CASH
 }
 
 model Category {

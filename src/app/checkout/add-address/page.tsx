@@ -1,9 +1,23 @@
 import { Button } from "@/app/_components/ui/button";
 import { Input } from "@/app/_components/ui/input";
 import { Label } from "@/app/_components/ui/label";
+import { db } from "@/app/_lib/prisma";
+import { auth } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 
-export default function AddAddressPage() {
+const isValidBrazilianZipCode = (zipCode: string): boolean => {
+  const cleanedZipCode = zipCode.replace(/\D/g, ""); // Remove caracteres não numéricos
+  const zipCodeRegex = /^[0-9]{8}$/; // 8 dígitos
+  return zipCodeRegex.test(cleanedZipCode);
+};
+
+export default async function AddAddressPage() {
+  const session = await auth();
+
+  if (!session || !session.user || !session.user.id) {
+    redirect("/login");
+  }
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6">Adicionar Endereço</h1>
@@ -16,14 +30,42 @@ export default function AddAddressPage() {
           const state = formData.get("state") as string;
           const zipCode = formData.get("zipCode") as string;
 
-          // Simulação de salvamento (sem Prisma)
-          console.log("Novo endereço fictício:", {
-            street,
-            number,
-            city,
-            state,
-            zipCode,
-          });
+          if (!isValidBrazilianZipCode(zipCode)) {
+            throw new Error(
+              "CEP inválido. Deve conter 8 dígitos (ex.: 12345-678)."
+            );
+          }
+
+          const normalizedZipCode = zipCode.replace(/\D/g, "");
+
+          if (!session?.user?.id) {
+            throw new Error("User not authenticated");
+          }
+
+          await db.$transaction([
+            // Remove o status de padrão de todos os endereços existentes do usuário
+            db.address.updateMany({
+              where: {
+                userId: session.user.id,
+                isDefault: true,
+              },
+              data: {
+                isDefault: false,
+              },
+            }),
+            // Cria o novo endereço como padrão
+            db.address.create({
+              data: {
+                street,
+                number,
+                city: city || undefined,
+                state: state || undefined,
+                zipCode: normalizedZipCode,
+                userId: session.user.id,
+                isDefault: true,
+              },
+            }),
+          ]);
 
           redirect("/checkout");
         }}
