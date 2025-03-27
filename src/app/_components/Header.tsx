@@ -4,17 +4,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import { MoveLeftIcon } from "lucide-react";
 import Cart from "./cart/Cart";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import ProfileMenu from "./ProfileMenu";
 
 const Header = () => {
   const router = useRouter();
   const path = usePathname();
 
   const { status } = useSession();
-
-  const handleLogout = () => {
-    signOut();
-  };
 
   return (
     <div className="bg-accent-foreground p-4 flex justify-between">
@@ -37,9 +34,7 @@ const Header = () => {
             Login
           </Button>
         ) : (
-          <Button className="text-white" variant="ghost" onClick={handleLogout}>
-            Sair
-          </Button>
+          <ProfileMenu />
         )}
 
         <Cart />
