@@ -101,6 +101,11 @@ export default function CheckoutClient({
         quantity: item.quantity,
         priceAtTime: item.priceAtTime,
         observation: item.observation || null,
+        orderExtras: item.orderExtras.map((extra) => ({
+          extraId: extra.extraId,
+          quantity: extra.quantity,
+          priceAtTime: extra.priceAtTime,
+        })),
       })),
     };
 

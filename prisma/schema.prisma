@@ -120,16 +120,39 @@ model Category {
 model Product {
   id         String   @id @default(uuid())
   name       String
-  price      Float
+  price      Float?
   categoryId String
   discount   Float? // Opcional, null se não houver desconto
   imageUrl   String? // Novo campo para URL da imagem (opcional)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  isHalfHalf Boolean? // Novo campo para indicar se o produto é meio a meio
 
-  category   Category    @relation(fields: [categoryId], references: [id])
-  orderItems OrderItem[] // Produtos aparecem em itens de pedido
-  Extras     Extra[]
+  category         Category    @relation(fields: [categoryId], references: [id])
+  orderItems       OrderItem[] // Produtos aparecem em itens de pedido
+  Extras           Extra[]
+  Size             Size[]
+  firstHalfPizzas  HalfHalf[]  @relation("FirstHalf") // Relação oposta para firstHalf
+  secondHalfPizzas HalfHalf[]  @relation("SecondHalf") // Relação oposta para secondHalf
+}
+
+model Size {
+  id         String      @id @default(uuid())
+  name       String // Ex.: "Pequeno", "Médio", "Grande"
+  price      Float
+  productId  String
+  product    Product     @relation(fields: [productId], references: [id])
+  orderItems OrderItem[] // Tamanhos aparecem em itens de pedido
+}
+
+model HalfHalf {
+  id           String    @id @default(uuid())
+  orderItemId  String    @unique
+  orderItem    OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  firstHalfId  String // Primeiro sabor
+  firstHalf    Product   @relation("FirstHalf", fields: [firstHalfId], references: [id])
+  secondHalfId String // Segundo sabor
+  secondHalf   Product   @relation("SecondHalf", fields: [secondHalfId], references: [id])
 }
 
 model OrderItem {
@@ -145,6 +168,9 @@ model OrderItem {
   order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product     Product      @relation(fields: [productId], references: [id])
   orderExtras OrderExtra[] // Lista de extras associados a este item
+  Size        Size?        @relation(fields: [sizeId], references: [id])
+  sizeId      String?
+  HalfHalf    HalfHalf?
 }
 
 enum Status {

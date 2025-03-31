@@ -1,6 +1,6 @@
 import { db } from "@/app/_lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { PaymentMethod } from "@prisma/client";
+import { OrderExtra, PaymentMethod } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
   const {
@@ -79,7 +79,27 @@ export async function POST(req: NextRequest) {
           },
         },
       },
+      include: {
+        items: true,
+      },
     });
+
+    const orderExtrasPromises = items.flatMap((item, index) => {
+      const orderItemId = order.items[index].id; // Pega o ID do OrderItem recém-criado
+      return item.orderExtras.map((extra: OrderExtra) =>
+        db.orderExtra.create({
+          data: {
+            orderItemId,
+            extraId: extra.extraId,
+            quantity: extra.quantity,
+            priceAtTime: extra.priceAtTime,
+          },
+        })
+      );
+    });
+
+    // Executa todas as criações de OrderExtra
+    await Promise.all(orderExtrasPromises);
 
     return NextResponse.json(order, { status: 201 });
   } catch (error) {
