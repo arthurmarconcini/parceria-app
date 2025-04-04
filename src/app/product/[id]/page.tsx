@@ -1,8 +1,10 @@
 import { db } from "@/app/_lib/prisma";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import ProductAdditionals from "./_components/product_additional";
+
 import currencyFormat from "@/app/_helpers/currency-format";
+
+import { ProductClient } from "./_components/product_cliente";
 
 interface ProductProps {
   params: Promise<{ id: string }>;
@@ -17,6 +19,17 @@ const Product = async ({ params }: ProductProps) => {
     },
     include: {
       Extras: true,
+      Size: true,
+      category: true,
+    },
+  });
+
+  const pizzas = await db.product.findMany({
+    where: {
+      categoryId: product?.categoryId,
+    },
+    include: {
+      Size: true,
     },
   });
 
@@ -25,7 +38,7 @@ const Product = async ({ params }: ProductProps) => {
   }
 
   return (
-    <div>
+    <div className="container mx-auto">
       <div className="flex gap-4 justify-between p-4">
         <Image
           src={
@@ -42,11 +55,13 @@ const Product = async ({ params }: ProductProps) => {
           <h2 className="text-sm">Pao, carne, queijo e salada</h2>
 
           <p className="text-xs text-muted-foreground">
-            {currencyFormat(product.price)}
+            {!product.isHalfHalf
+              ? currencyFormat(product.price!)
+              : `a partir de ${currencyFormat(product.Size[0].price!)}`}
           </p>
         </div>
       </div>
-      <ProductAdditionals product={product} />
+      <ProductClient product={product} pizzas={pizzas} />
     </div>
   );
 };

@@ -1,9 +1,13 @@
 import { ScrollArea, ScrollBar } from "@/app/_components/ui/scroll-area";
-import { Product } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import ProductCard from "./ProductCard";
 
 interface ProductListProps {
-  products: Product[];
+  products: Prisma.ProductGetPayload<{
+    include: {
+      Size: true;
+    };
+  }>[];
 }
 
 const ProductList = ({ products }: ProductListProps) => {

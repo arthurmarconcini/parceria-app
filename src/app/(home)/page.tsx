@@ -5,11 +5,15 @@ import ProductList from "./_components/ProductList";
 export default async function Home() {
   const categories = await db.category.findMany({
     include: {
-      products: true,
+      products: {
+        include: {
+          Size: true,
+        },
+      },
     },
   });
   return (
-    <div className="">
+    <div className="container mx-auto">
       <CategoryList categories={categories} />
       <div className="space-y-6">
         {categories.map((category) => (

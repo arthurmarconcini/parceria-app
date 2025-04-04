@@ -1,3 +1,4 @@
+import { Product } from "@prisma/client";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -8,11 +9,18 @@ type Extra = {
   priceAtTime: number;
 };
 
+type HalfHalf = {
+  firstHalf?: Product;
+  secondHalf?: Product;
+};
+
 export type CartItem = {
   name: string;
   productId: string;
   cartItemId: string;
   quantity: number;
+  sizeId?: string;
+  halfhalf?: HalfHalf;
   imageUrl: string;
   observation?: string;
   priceAtTime: number;
@@ -47,7 +55,15 @@ const areExtrasEqual = (extras1: Extra[], extras2: Extra[]): boolean => {
   );
 };
 
-// Função auxiliar para comparar dois itens do carrinho
+// Função auxiliar para comparar HalfHalf
+const areHalfHalfEqual = (h1?: HalfHalf, h2?: HalfHalf): boolean => {
+  if (!h1 && !h2) return true;
+  if (!h1 || !h2) return false;
+  return (
+    h1.firstHalf?.id === h2.firstHalf?.id &&
+    h1.secondHalf?.id === h2.secondHalf?.id
+  );
+};
 
 export const useCartStore = create<CartState>()(
   persist(
@@ -57,13 +73,24 @@ export const useCartStore = create<CartState>()(
         set((state) => {
           const existingItem = state.cart.find((cartItem) => {
             const sameProduct = cartItem.productId === item.productId;
+            const sameSize = cartItem.sizeId === item.sizeId; // Inclui sizeId na comparação
             const sameExtras = areExtrasEqual(
               cartItem.orderExtras,
               item.orderExtras
             );
             const sameObservation =
               (cartItem.observation || "") === (item.observation || "");
-            return sameProduct && sameExtras && sameObservation;
+            const sameHalfHalf = areHalfHalfEqual(
+              cartItem.halfhalf,
+              item.halfhalf
+            );
+            return (
+              sameProduct &&
+              sameSize &&
+              sameExtras &&
+              sameObservation &&
+              sameHalfHalf
+            );
           });
 
           if (existingItem) {
@@ -112,19 +139,14 @@ export const useCartStore = create<CartState>()(
         })),
       getTotalPrice: () => {
         const state = get();
-
         return state.cart.reduce((total, item) => {
-          // Calcula o preço total dos extras
           const extrasTotal = item.orderExtras.reduce((total, extra) => {
             return total + extra.priceAtTime * extra.quantity;
           }, 0);
-
-          // Calcula o preço total do item com base na quantidade e no preço unitário
           return total + (item.priceAtTime + extrasTotal) * item.quantity;
         }, 0);
       },
     }),
-
     {
       name: "cart-storage",
     }

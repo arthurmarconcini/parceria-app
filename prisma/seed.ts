@@ -1,82 +1,206 @@
-// prisma/seed.ts
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  // Limpar as tabelas existentes (opcional, cuidado ao usar em produção)
-  await prisma.orderExtra.deleteMany();
-  await prisma.extra.deleteMany();
+  // Limpar o banco de dados antes de popular (opcional)
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
+  await prisma.extra.deleteMany();
+  await prisma.size.deleteMany();
   await prisma.product.deleteMany();
   await prisma.category.deleteMany();
 
-  // Dados das categorias
-  const categories = [
-    { name: "Pizzas" },
-    { name: "Hambúrgueres" },
-    { name: "Bebidas" },
-    { name: "Sobremesas" },
-    { name: "Saladas" },
+  // Criar categorias
+  const pizzaCategory = await prisma.category.create({
+    data: { name: "Pizzas" },
+  });
+  const burgerCategory = await prisma.category.create({
+    data: { name: "Hambúrgueres" },
+  });
+  const drinkCategory = await prisma.category.create({
+    data: { name: "Bebidas" },
+  });
+
+  // Pizzas com tamanhos P, M, G
+  const pizzas = [
+    {
+      name: "Pizza de Calabresa",
+      categoryId: pizzaCategory.id,
+      isHalfHalf: true,
+      sizes: [
+        { name: "P", price: 35.0 },
+        { name: "M", price: 45.0 },
+        { name: "G", price: 55.0 },
+      ],
+    },
+    {
+      name: "Pizza Margherita",
+      categoryId: pizzaCategory.id,
+      isHalfHalf: true,
+      sizes: [
+        { name: "P", price: 33.0 },
+        { name: "M", price: 43.0 },
+        { name: "G", price: 53.0 },
+      ],
+    },
+    {
+      name: "Pizza Quatro Queijos",
+      categoryId: pizzaCategory.id,
+      isHalfHalf: true,
+      sizes: [
+        { name: "P", price: 38.0 },
+        { name: "M", price: 48.0 },
+        { name: "G", price: 58.0 },
+      ],
+    },
+    {
+      name: "Pizza Pepperoni",
+      categoryId: pizzaCategory.id,
+      isHalfHalf: true,
+      sizes: [
+        { name: "P", price: 36.0 },
+        { name: "M", price: 46.0 },
+        { name: "G", price: 56.0 },
+      ],
+    },
+    {
+      name: "Pizza Frango com Catupiry",
+      categoryId: pizzaCategory.id,
+      isHalfHalf: true,
+      sizes: [
+        { name: "P", price: 37.0 },
+        { name: "M", price: 47.0 },
+        { name: "G", price: 57.0 },
+      ],
+    },
   ];
 
-  // Inserir categorias, produtos e extras
-  for (const categoryData of categories) {
-    const category = await prisma.category.create({
+  // Hambúrgueres (preço único, sem tamanhos)
+  const burgers = [
+    { name: "X-Burger", categoryId: burgerCategory.id, price: 18.0 },
+    { name: "X-Salada", categoryId: burgerCategory.id, price: 20.0 },
+    { name: "X-Bacon", categoryId: burgerCategory.id, price: 22.0 },
+    { name: "X-Tudo", categoryId: burgerCategory.id, price: 25.0 },
+    {
+      name: "Hambúrguer Artesanal",
+      categoryId: burgerCategory.id,
+      price: 28.0,
+    },
+  ];
+
+  // Bebidas (preço único, sem tamanhos)
+  const drinks = [
+    { name: "Coca-Cola 350ml", categoryId: drinkCategory.id, price: 6.0 },
+    {
+      name: "Guaraná Antarctica 350ml",
+      categoryId: drinkCategory.id,
+      price: 5.5,
+    },
+    { name: "Fanta Laranja 350ml", categoryId: drinkCategory.id, price: 5.5 },
+    { name: "Suco de Laranja 500ml", categoryId: drinkCategory.id, price: 8.0 },
+    { name: "Água Mineral 500ml", categoryId: drinkCategory.id, price: 4.0 },
+  ];
+
+  // Adicionais (extras)
+  const extras = [
+    { name: "Queijo Extra", price: 5.0 }, // Para pizzas ou hambúrgueres
+    { name: "Bacon", price: 6.0 }, // Para hambúrgueres ou pizzas
+    { name: "Catupiry Extra", price: 6.5 }, // Para pizzas
+    { name: "Pepperoni Extra", price: 7.0 }, // Para pizzas
+    { name: "Alface e Tomate", price: 3.0 }, // Para hambúrgueres
+  ];
+
+  // Popular Pizzas
+  const createdPizzas = [];
+  for (const pizza of pizzas) {
+    const createdPizza = await prisma.product.create({
       data: {
-        name: categoryData.name,
+        name: pizza.name,
+        categoryId: pizza.categoryId,
+        isHalfHalf: pizza.isHalfHalf,
+        Size: {
+          create: pizza.sizes.map((size) => ({
+            name: size.name,
+            price: size.price,
+          })),
+        },
       },
     });
-
-    // Produtos por categoria
-    const products = Array.from({ length: 5 }, (_, index) => ({
-      name: `${categoryData.name.slice(0, -1)} ${index + 1}`, // Remove 's' do plural e adiciona número
-      price: parseFloat((10 + index * 5).toFixed(2)), // Preços fictícios: 10, 15, 20, 25, 30
-      categoryId: category.id,
-      discount: index === 0 ? 2.0 : null, // Apenas o primeiro produto tem desconto
-      imageUrl: `https://img.freepik.com/psd-gratuitas/modelo-de-midia-social-de-hamburguer-quente-e-picante_505751-2886.jpg?t=st=1741020839~exp=1741024439~hmac=066195a75d87fd588f3d2ff7fe7f4f25546e4a76e51c713e79a9bcc60faf7c01&w=740`, // URL fictícia
-    }));
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const createdProducts = await prisma.product.createMany({
-      data: products,
-    });
-
-    // Adicionar extras apenas para "Pizzas" e "Hambúrgueres"
-    if (["Pizzas", "Hambúrgueres"].includes(categoryData.name)) {
-      // Buscar os produtos recém-criados para associar extras
-      const productsInCategory = await prisma.product.findMany({
-        where: { categoryId: category.id },
-      });
-
-      const extras = [
-        { name: "Queijo extra", price: 2.0 },
-        { name: "Pepperoni", price: 3.0 },
-        { name: "Cebola", price: 1.5 },
-        ...(categoryData.name === "Hambúrgueres"
-          ? [{ name: "Bacon", price: 2.5 }]
-          : []),
-      ];
-
-      for (const product of productsInCategory) {
-        await prisma.extra.createMany({
-          data: extras.map((extra) => ({
-            name: extra.name,
-            price: extra.price,
-            productId: product.id,
-          })),
-        });
-      }
-    }
+    createdPizzas.push(createdPizza);
   }
+
+  // Popular Hambúrgueres
+  const createdBurgers = [];
+  for (const burger of burgers) {
+    const createdBurger = await prisma.product.create({
+      data: {
+        name: burger.name,
+        price: burger.price,
+        categoryId: burger.categoryId,
+      },
+    });
+    createdBurgers.push(createdBurger);
+  }
+
+  // Popular Bebidas
+  for (const drink of drinks) {
+    await prisma.product.create({
+      data: {
+        name: drink.name,
+        price: drink.price,
+        categoryId: drink.categoryId,
+      },
+    });
+  }
+
+  // Popular Extras (associados a produtos específicos)
+  await prisma.extra.create({
+    data: {
+      name: extras[0].name, // Queijo Extra
+      price: extras[0].price,
+      productId: createdPizzas[0].id, // Associado à Pizza de Calabresa
+    },
+  });
+
+  await prisma.extra.create({
+    data: {
+      name: extras[1].name, // Bacon
+      price: extras[1].price,
+      productId: createdBurgers[2].id, // Associado ao X-Bacon
+    },
+  });
+
+  await prisma.extra.create({
+    data: {
+      name: extras[2].name, // Catupiry Extra
+      price: extras[2].price,
+      productId: createdPizzas[4].id, // Associado à Pizza Frango com Catupiry
+    },
+  });
+
+  await prisma.extra.create({
+    data: {
+      name: extras[3].name, // Pepperoni Extra
+      price: extras[3].price,
+      productId: createdPizzas[3].id, // Associado à Pizza Pepperoni
+    },
+  });
+
+  await prisma.extra.create({
+    data: {
+      name: extras[4].name, // Alface e Tomate
+      price: extras[4].price,
+      productId: createdBurgers[1].id, // Associado ao X-Salada
+    },
+  });
 
   console.log("Seed concluído com sucesso!");
 }
 
 main()
   .catch((e) => {
-    console.error("Erro ao executar o seed:", e);
+    console.error(e);
     process.exit(1);
   })
   .finally(async () => {
