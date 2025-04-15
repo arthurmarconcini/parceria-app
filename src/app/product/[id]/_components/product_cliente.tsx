@@ -98,9 +98,7 @@ export const ProductClient = ({ product, pizzas }: ProductClientProps) => {
       quantity,
       sizeId: selectedSize,
       halfhalf: isHalfHalfMode ? halfhalf : undefined,
-      imageUrl:
-        product.imageUrl ||
-        "https://img.freepik.com/vetores-gratis/delicioso-hamburguer-fast-food-isolado_18591-84257.jpg?t=st=1743799934~exp=1743803534~hmac=a7a439db240ada8f06d73c791972dfa61c2717542f3440b25d65e2d1b1133585&w=740",
+      imageUrl: product.imageUrl!,
       observation: observations || undefined,
       priceAtTime,
       orderExtras,
@@ -197,11 +195,13 @@ export const ProductClient = ({ product, pizzas }: ProductClientProps) => {
         )}
 
         {/* Seleção de tamanho */}
-        <ProductOptions
-          sizes={product.Size}
-          selectedSize={selectedSize}
-          onSizeChange={setSelectedSize}
-        />
+        {isHalfHalfMode && (
+          <ProductOptions
+            sizes={product.Size}
+            selectedSize={selectedSize}
+            onSizeChange={setSelectedSize}
+          />
+        )}
 
         {/* Seleção de sabores para Meio a Meio */}
         {isHalfHalfMode && (

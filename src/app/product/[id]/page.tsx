@@ -41,10 +41,7 @@ const Product = async ({ params }: ProductProps) => {
     <div className="container mx-auto">
       <div className="flex gap-4 justify-between p-4">
         <Image
-          src={
-            product.imageUrl ||
-            `https://img.freepik.com/psd-gratuitas/modelo-de-midia-social-de-hamburguer-quente-e-picante_505751-2886.jpg?t=st=1741020839~exp=1741024439~hmac=066195a75d87fd588f3d2ff7fe7f4f25546e4a76e51c713e79a9bcc60faf7c01&w=740`
-          }
+          src={product.imageUrl!}
           alt={product.name}
           width={64}
           height={64}

@@ -13,7 +13,7 @@ interface ProductAdditionalsProps {
     };
   }>;
   extrasQuantities: { [key: string]: number };
-  onExtraQuantityChange: (extraId: string, quanttity: number) => void;
+  onExtraQuantityChange: (extraId: string, quantity: number) => void;
 }
 
 const ProductAdditionals = ({
@@ -22,48 +22,15 @@ const ProductAdditionals = ({
   onExtraQuantityChange,
 }: ProductAdditionalsProps) => {
   const handleExtraIncrement = (extraId: string) => {
-    if (extrasQuantities[extraId] > 9) return;
-
+    if (extrasQuantities[extraId] >= 10) return;
     onExtraQuantityChange(extraId, extrasQuantities[extraId] + 1);
   };
 
   const handleExtraDecrement = (extraId: string) => {
-    if (extrasQuantities[extraId] === 0) return;
-
+    if (extrasQuantities[extraId] <= 0) return;
     onExtraQuantityChange(extraId, extrasQuantities[extraId] - 1);
   };
 
-  /* const handleAddToCart = () => {
-    const cartItem: CartItem = {
-      name: product.name,
-      productId: product.id,
-      quantity: quantity,
-      imageUrl: product.imageUrl || "",
-      observation: observations,
-      priceAtTime: product.price,
-      orderExtras: product.Extras.filter(
-        (extra) => extrasQuantities[extra.id] > 0
-      ) // Filtra apenas extras com quantidade > 0
-        .map((extra) => ({
-          name: extra.name,
-          extraId: extra.id,
-          quantity: extrasQuantities[extra.id],
-          priceAtTime: extra.price,
-        })),
-    };
-
-    addToCart(cartItem);
-
-    console.log(cart);
-
-    // Reseta os valores após adicionar ao carrinho
-    setQuantity(1);
-    setExtrasQuantities(
-      product.Extras.reduce((acc, extra) => ({ ...acc, [extra.id]: 0 }), {})
-    );
-    setObservations(""); // Opcional: resetar as observações também
-  };
- */
   return (
     <div className="flex flex-col gap-4">
       <div className="w-full flex flex-col gap-4">
@@ -73,54 +40,63 @@ const ProductAdditionals = ({
             description="Escolha os ingredientes"
           />
 
-          <div>
-            {product.Extras.map((extra) => (
-              <div
-                key={extra.id}
-                className="flex justify-between items-center p-4 border-b border-b-muted"
-              >
-                <div>
-                  <p className="text-sm font-semibold">{`Adicionar: ${extra.name}`}</p>
-                  <p className="text-xs text-muted-foreground">{`+ ${currencyFormat(
-                    extra.price
-                  )}`}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleExtraDecrement(extra.id)}
-                    disabled={extrasQuantities[extra.id] === 0}
-                  >
-                    <MinusIcon
-                      size={16}
-                      color={`${
-                        extrasQuantities[extra.id] > 0 ? "orange" : "gray"
-                      }`}
-                    />
-                  </Button>
+          {product.Extras.length === 0 ? (
+            <div className="p-6 flex items-center justify-center">
+              <h1 className="text-sm font-semibold">
+                Este produto não possui nenhuma opção de adicional
+              </h1>
+            </div>
+          ) : (
+            <div>
+              {product.Extras.map((extra) => (
+                <div
+                  key={extra.id}
+                  className="flex justify-between items-center p-4 border-b border-b-muted"
+                >
+                  <div>
+                    <h1 className="text-sm ">{`Adicionar: ${extra.name}`}</h1>
+                    <p className="text-xs text-muted-foreground">{`+ ${currencyFormat(
+                      extra.price
+                    )}`}</p>
+                  </div>
 
-                  <span className="w-8 text-center">
-                    {extrasQuantities[extra.id]}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleExtraDecrement(extra.id)}
+                      disabled={extrasQuantities[extra.id] === 0}
+                    >
+                      <MinusIcon
+                        size={16}
+                        color={
+                          extrasQuantities[extra.id] > 0 ? "orange" : "gray"
+                        }
+                      />
+                    </Button>
 
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleExtraIncrement(extra.id)}
-                    disabled={extrasQuantities[extra.id] === 10}
-                  >
-                    <PlusIcon
-                      size={16}
-                      color={`${
-                        extrasQuantities[extra.id] < 10 ? "orange" : "gray"
-                      }`}
-                    />
-                  </Button>
+                    <span className="w-8 text-center text-sm">
+                      {extrasQuantities[extra.id]}
+                    </span>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleExtraIncrement(extra.id)}
+                      disabled={extrasQuantities[extra.id] >= 10}
+                    >
+                      <PlusIcon
+                        size={16}
+                        color={
+                          extrasQuantities[extra.id] < 10 ? "orange" : "gray"
+                        }
+                      />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

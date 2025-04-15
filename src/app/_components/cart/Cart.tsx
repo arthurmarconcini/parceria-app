@@ -10,7 +10,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "../ui/sheet";
-import { ScrollArea } from "../ui/scroll-area";
+import { ScrollArea, ScrollBar } from "../ui/scroll-area";
 import currencyFormat from "@/app/_helpers/currency-format";
 import { ShoppingCartIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -34,6 +34,7 @@ const Cart = () => {
 
     router.push("/checkout");
   }
+
   return (
     <Sheet open={isCartOpen} onOpenChange={toggleCart}>
       <SheetTrigger asChild>
@@ -47,21 +48,20 @@ const Cart = () => {
               </p>
             </div>
           )}
-
           <ShoppingCartIcon className="size-6" />
         </Button>
       </SheetTrigger>
-      <SheetContent className="flex flex-col h-full p-0 overflow-hidden">
-        <SheetHeader>
+      <SheetContent className="flex flex-col h-full p-0 overflow-auto w-full sm:w-[400px]">
+        <SheetHeader className="p-4">
           <SheetTitle>Carrinho de compras</SheetTitle>
         </SheetHeader>
 
         {cart.length === 0 ? (
           <div className="p-4 text-center font-bold">
-            <span>Não ha nada no carrinho!</span>
+            <span>Não há nada no carrinho!</span>
           </div>
         ) : (
-          <div className="flex flex-col overflow-hidden">
+          <div className="flex flex-col flex-1 overflow-hidden">
             <div className="flex justify-between items-center p-4">
               <h1 className="text-sm font-bold">Itens adicionados</h1>
               <Button
@@ -72,17 +72,18 @@ const Cart = () => {
                 Limpar
               </Button>
             </div>
-            <ScrollArea className="max-h-[calc(100vh-250px)]">
-              <div className="p-4 flex flex-col gap-4">
+            <ScrollArea className="flex-1 h-1">
+              <div className="p-4 flex flex-col gap-1">
                 {cart.map((item) => (
                   <CartItem key={item.cartItemId} item={item} />
                 ))}
               </div>
+              <ScrollBar orientation="vertical" />
             </ScrollArea>
           </div>
         )}
 
-        <div className="p-4 flex flex-col gap-4">
+        <div className="p-4 flex flex-col gap-4 shrink-0">
           <h1 className="text-sm font-bold">Resumo de valores</h1>
           <div className="flex flex-col gap-2">
             <div className="flex justify-between text-xs text-muted-foreground">
@@ -99,7 +100,7 @@ const Cart = () => {
             </div>
           </div>
         </div>
-        <div className="p-4">
+        <div className="p-4 shrink-0">
           <Button onClick={handleCheckout} className="w-full">
             Finalizar compra
           </Button>

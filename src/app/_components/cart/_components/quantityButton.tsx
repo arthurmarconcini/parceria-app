@@ -10,7 +10,7 @@ const QuantityButton = ({ product }: QuantityButtonProps) => {
   const { decreaseQuantity, increaseQuantity, removeFromCart } = useCartStore();
 
   return (
-    <div className="rounded-md flex gap-2 items-center bg-neutral-100 ">
+    <div className="rounded-md flex gap-2 items-center bg-neutral-100 justify-center">
       {product.quantity === 1 ? (
         <Button
           onClick={() => removeFromCart(product.cartItemId)}

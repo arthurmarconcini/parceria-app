@@ -119,6 +119,8 @@ async function main() {
         name: pizza.name,
         categoryId: pizza.categoryId,
         isHalfHalf: pizza.isHalfHalf,
+        imageUrl:
+          "https://img.freepik.com/fotos-gratis/pizza-pizza-cheia-de-tomates-salame-e-azeitonas_140725-1200.jpg?t=st=1744671528~exp=1744675128~hmac=2643592523d49468d3cb30d93a38b0d730f46a123231bdfb056ac5f21a387154&w=740",
         Size: {
           create: pizza.sizes.map((size) => ({
             name: size.name,
@@ -138,6 +140,8 @@ async function main() {
         name: burger.name,
         price: burger.price,
         categoryId: burger.categoryId,
+        imageUrl:
+          "https://img.freepik.com/fotos-gratis/hamburguer-de-vista-frontal-em-um-carrinho_141793-15542.jpg?t=st=1744671528~exp=1744675128~hmac=e38d7ee5daf2bdcf8944c7b81c1914f08c6eff6d87911c7eceea11f0e45c9ccd&w=996",
       },
     });
     createdBurgers.push(createdBurger);
@@ -150,6 +154,8 @@ async function main() {
         name: drink.name,
         price: drink.price,
         categoryId: drink.categoryId,
+        imageUrl:
+          "https://img.freepik.com/vetores-gratis/anuncio-de-refrigerante-de-limao-realista_52683-8100.jpg?t=st=1744671528~exp=1744675128~hmac=ab9dcde6a181f7fbe26ad34e64d095447713e0747c9e2a8e698ed402deedfe1d&w=740",
       },
     });
   }
