@@ -38,7 +38,7 @@ const Cart = () => {
   return (
     <Sheet open={isCartOpen} onOpenChange={toggleCart}>
       <SheetTrigger asChild>
-        <Button className="text-white relative">
+        <Button variant={"ghost"} className="text-white relative">
           {cart.length > 0 && (
             <div className="absolute bg-white text-black flex justify-center items-center rounded-full -bottom-1 -left-0.5 size-6">
               <p>

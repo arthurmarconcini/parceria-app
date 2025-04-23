@@ -12,7 +12,7 @@ interface CategoryListProps {
 const CategoryList = ({ categories }: CategoryListProps) => {
   return (
     <ScrollArea>
-      <div className="flex w-max space-x-2 p-4 gap-1">
+      <div className="flex w-max space-x-2 gap-1 px-4 mt-6">
         {categories.map((category) => (
           <Link key={category.id} href={`/category/${category.id}`}>
             <Button>{category.name}</Button>

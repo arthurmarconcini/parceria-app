@@ -2,10 +2,11 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "./ui/button";
-import { MoveLeftIcon } from "lucide-react";
+import { MoveLeftIcon, User } from "lucide-react";
 import Cart from "./cart/Cart";
 import { useSession } from "next-auth/react";
 import ProfileMenu from "./ProfileMenu";
+import Link from "next/link";
 
 const Header = () => {
   const router = useRouter();
@@ -14,30 +15,41 @@ const Header = () => {
   const { status } = useSession();
 
   return (
-    <div className="bg-accent-foreground p-4 flex justify-between">
+    <div className="bg-primary-foreground p-4 flex justify-between">
       <div className="flex gap-2 items-center">
         {path !== "/" && (
-          <Button className="text-secondary" onClick={() => router.back()}>
+          <Button
+            variant="link"
+            className="text-secondary cursor-pointer"
+            onClick={() => router.back()}
+          >
             <MoveLeftIcon />
           </Button>
         )}
-        <h1 className="text-secondary text-2xl font-bold ">Parcerias</h1>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:gap-2">
+          <Link href="/">
+            <h1 className="text-2xl font-bold text-primary">Parcerias</h1>
+          </Link>
+
+          <h2 className="text-lg font-semibold text-background">
+            Pizzas e Burgers
+          </h2>
+        </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-center gap-2.5">
+        <Cart />
         {status !== "authenticated" ? (
           <Button
-            className="text-white"
-            variant="ghost"
+            className="text-white cursor-pointer"
+            variant="link"
             onClick={() => router.push("/login")}
           >
-            Login
+            <User className="size-6" />
           </Button>
         ) : (
           <ProfileMenu />
         )}
-
-        <Cart />
       </div>
     </div>
   );

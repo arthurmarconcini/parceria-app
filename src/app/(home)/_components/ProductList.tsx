@@ -13,7 +13,7 @@ interface ProductListProps {
 const ProductList = ({ products }: ProductListProps) => {
   return (
     <ScrollArea className="">
-      <div className="flex w-max space-x-2 px-4">
+      <div className="flex min-h-[200px] w-max space-x-2 px-4">
         {products.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}

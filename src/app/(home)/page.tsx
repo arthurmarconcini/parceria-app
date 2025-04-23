@@ -15,7 +15,7 @@ export default async function Home() {
   return (
     <div className="container mx-auto">
       <CategoryList categories={categories} />
-      <div className="space-y-6">
+      <div className="space-y-6 mt-6">
         {categories.map((category) => (
           <div key={category.id} className="space-y-2.5">
             <h1 className="px-4 font-bold text-2xl">{category.name}</h1>
