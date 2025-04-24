@@ -13,10 +13,13 @@ import { Label } from "@/app/_components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/app/_components/ui/radio-group";
 import currencyFormat from "@/app/_helpers/currency-format";
 import { useCartStore } from "@/app/_hooks/cartStore";
+
 import { Address, PaymentMethod } from "@prisma/client";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import ConfirmDeleteAddressDialog from "./ConfirmDeleteAddressDialog";
 
 type CheckoutClientProps = {
   addresses: Address[];
@@ -37,6 +40,7 @@ export default function CheckoutClient({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("PIX");
   const [requiresChange, setRequiresChange] = useState<boolean>(false);
   const [changeFor, setChangeFor] = useState<number | null>(null);
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
 
   const handleAddressChange = (value: string) => {
     setSelectedAddress(value);
@@ -60,6 +64,28 @@ export default function CheckoutClient({
   const handleChangeForChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
     setChangeFor(isNaN(value) || value <= 0 ? null : value);
+  };
+
+  const handleConfirmModalOpen = () => {
+    setConfirmModalOpen(!confirmModalOpen);
+  };
+
+  const handleDeleteAddress = async (addressId: string) => {
+    try {
+      const response = await fetch(`/api/address/${addressId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erro ao excluir endereço.");
+      }
+
+      router.refresh(); // Atualiza a página após a exclusão
+    } catch (error) {
+      console.error("Erro ao excluir endereço:", error);
+      alert("Erro ao excluir endereço. Tente novamente.");
+    }
   };
 
   const handleSubmit = async () => {
@@ -147,10 +173,18 @@ export default function CheckoutClient({
               {addresses.map((address) => (
                 <div key={address.id} className="flex items-center space-x-2">
                   <RadioGroupItem value={address.id} id={address.id} />
-                  <Label htmlFor={address.id}>
-                    {address.street}, {address.number} - {address.city || ""},{" "}
-                    {address.state || ""} ({address.zipCode})
-                  </Label>
+                  <div className="flex items-center gap-4 w-full">
+                    <Label htmlFor={address.id}>
+                      {address.street}, {address.number} - {address.city || ""},{" "}
+                      {address.state || ""} ({address.zipCode})
+                    </Label>
+                    <ConfirmDeleteAddressDialog
+                      addressId={address.id}
+                      handleDeleteAddress={handleDeleteAddress}
+                      open={confirmModalOpen}
+                      modalOpen={handleConfirmModalOpen}
+                    />
+                  </div>
                 </div>
               ))}
             </RadioGroup>
