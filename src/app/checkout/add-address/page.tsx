@@ -3,12 +3,6 @@ import { auth } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import AddressForm from "./_components/AddressForm";
 
-const isValidBrazilianZipCode = (zipCode: string): boolean => {
-  const cleanedZipCode = zipCode.replace(/\D/g, "");
-  const zipCodeRegex = /^[0-9]{8}$/;
-  return zipCodeRegex.test(cleanedZipCode);
-};
-
 export default async function AddAddressPage() {
   const session = await auth();
 
@@ -16,17 +10,9 @@ export default async function AddAddressPage() {
     redirect("/login");
   }
 
-  // Carrega a cidade do restaurante
+  // Carrega a cidade do restaurante (assumindo que há apenas uma)
   const city = await db.restaurantCity.findFirst();
-  const restaurantCity = city ? { id: city.id, name: city.name } : null;
-
-  // Carrega as localidades disponíveis para a cidade do restaurante
-  const localities = await db.locality.findMany({
-    where: { cityId: city?.id },
-    orderBy: { name: "asc" },
-  });
-
-  if (!restaurantCity) {
+  if (!city) {
     return (
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold mb-6">Erro</h1>
@@ -35,42 +21,52 @@ export default async function AddAddressPage() {
     );
   }
 
+  // Define o estado fixo com base na cidade (exemplo: "SP" para São Paulo)
+  const restaurantCity = { id: city.id, name: city.name };
+  const restaurantState = city.name === "São Paulo" ? "SP" : "Outro"; // Ajuste conforme a lógica real
+
+  // Carrega as localidades disponíveis para a cidade do restaurante
+  const localities = await db.locality.findMany({
+    where: { cityId: city.id },
+    orderBy: { name: "asc" },
+  });
+
   // Server Action para processar o formulário
   async function createAddress(formData: FormData) {
     "use server";
 
     const street = formData.get("street") as string;
     const number = formData.get("number") as string;
-    const city = formData.get("city") as string;
-    const state = formData.get("state") as string;
-    const zipCode = formData.get("zipCode") as string;
+    const zipCode = formData.get("zipCode") as string | null;
     const localityId = formData.get("localityId") as string;
+    const reference = formData.get("reference") as string | null;
+    const observation = formData.get("observation") as string | null;
 
-    // Valida o CEP
-    if (!isValidBrazilianZipCode(zipCode)) {
-      throw new Error("CEP inválido. Deve conter 8 dígitos (ex.: 12345-678).");
-    }
-
-    // Valida a localidade
     if (!localityId) {
       throw new Error("Selecione uma localidade.");
     }
 
-    const normalizedZipCode = zipCode.replace(/\D/g, "");
+    const normalizedZipCode = zipCode?.replace(/\D/g, "") || null;
 
     if (!session?.user?.id) {
       throw new Error("Usuário não autenticado");
     }
 
-    // Verifica a cidade do restaurante
-    const restaurantCity = await db.restaurantCity.findFirst();
-    if (!restaurantCity || city !== restaurantCity.name) {
-      throw new Error(
-        `Entregas são permitidas apenas em ${restaurantCity?.name}.`
-      );
+    // Verifica se já existe um endereço idêntico para evitar duplicatas
+    const existingAddress = await db.address.findFirst({
+      where: {
+        userId: session.user.id,
+        street,
+        number,
+        localityId,
+      },
+    });
+
+    if (existingAddress) {
+      throw new Error("Este endereço já está cadastrado.");
     }
 
-    // Verifica se a localidade pertence à cidade do restaurante
+    // Verifica a cidade e localidade
     const locality = await db.locality.findUnique({
       where: { id: localityId },
       include: { city: true },
@@ -81,15 +77,10 @@ export default async function AddAddressPage() {
     }
 
     await db.$transaction([
-      // Remove o status de padrão de todos os endereços existentes
+      // Remove o status de padrão de outros endereços
       db.address.updateMany({
-        where: {
-          userId: session.user.id,
-          isDefault: true,
-        },
-        data: {
-          isDefault: false,
-        },
+        where: { userId: session.user.id, isDefault: true },
+        data: { isDefault: false },
       }),
       // Cria o novo endereço como padrão
       db.address.create({
@@ -97,11 +88,13 @@ export default async function AddAddressPage() {
           street,
           number,
           city: restaurantCity.name,
-          state: state || undefined,
+          state: restaurantState, // Estado fixo
           zipCode: normalizedZipCode,
           localityId,
           userId: session.user.id,
           isDefault: true,
+          reference,
+          observation,
         },
       }),
     ]);
@@ -114,6 +107,7 @@ export default async function AddAddressPage() {
       <h1 className="text-2xl font-bold mb-6">Adicionar Endereço</h1>
       <AddressForm
         restaurantCity={restaurantCity}
+        restaurantState={restaurantState} // Passa o estado fixo
         localities={localities}
         createAddress={createAddress}
       />

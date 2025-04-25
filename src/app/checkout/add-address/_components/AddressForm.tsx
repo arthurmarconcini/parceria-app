@@ -22,13 +22,15 @@ interface FormState {
   zipCode: string;
   street: string;
   number: string;
-  state: string;
   localityId: string;
+  reference: string;
+  observation: string;
   error: string | null;
 }
 
 interface AddressFormProps {
   restaurantCity: { id: string; name: string };
+  restaurantState: string; // Novo: estado fixo
   localities: Locality[];
   createAddress: (formData: FormData) => Promise<void>;
 }
@@ -41,6 +43,7 @@ const isValidBrazilianZipCode = (zipCode: string): boolean => {
 
 export default function AddressForm({
   restaurantCity,
+  restaurantState,
   localities,
   createAddress,
 }: AddressFormProps) {
@@ -48,20 +51,18 @@ export default function AddressForm({
     zipCode: "",
     street: "",
     number: "",
-    state: "",
     localityId: "",
+    reference: "",
+    observation: "",
     error: null,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false); // Controle de envio
 
   const handleZipCodeChange = async (zipCode: string) => {
     setFormState((prev) => ({ ...prev, zipCode, error: null }));
 
-    if (!isValidBrazilianZipCode(zipCode)) {
-      setFormState((prev) => ({
-        ...prev,
-        error: "CEP inválido. Deve conter 8 dígitos (ex.: 12345-678).",
-      }));
-      return;
+    if (!zipCode || !isValidBrazilianZipCode(zipCode)) {
+      return; // CEP não é obrigatório, apenas ignora se inválido
     }
 
     try {
@@ -76,25 +77,21 @@ export default function AddressForm({
           ...prev,
           error: "CEP não encontrado.",
           street: "",
-          state: "",
           localityId: "",
         }));
         return;
       }
 
-      // Verifica se a cidade retornada é a mesma do restaurante
       if (data.localidade !== restaurantCity.name) {
         setFormState((prev) => ({
           ...prev,
           error: `Entregas são permitidas apenas em ${restaurantCity.name}.`,
           street: "",
-          state: "",
           localityId: "",
         }));
         return;
       }
 
-      // Busca a localidade correspondente ao bairro retornado
       const matchingLocality = localities.find(
         (locality) => locality.name.toLowerCase() === data.bairro.toLowerCase()
       );
@@ -102,7 +99,6 @@ export default function AddressForm({
       setFormState((prev) => ({
         ...prev,
         street: data.logradouro || "",
-        state: data.uf || "",
         localityId: matchingLocality?.id || "",
         error: matchingLocality
           ? null
@@ -113,59 +109,91 @@ export default function AddressForm({
       setFormState((prev) => ({
         ...prev,
         error: "Erro ao consultar o CEP. Tente novamente.",
-        street: "",
-        state: "",
-        localityId: "",
       }));
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting) return; // Impede cliques múltiplos
+
+    setIsSubmitting(true);
+    const formData = new FormData(e.target as HTMLFormElement);
+
+    try {
+      await createAddress(formData);
+    } catch (error) {
+      setFormState((prev) => ({
+        ...prev,
+        error: error instanceof Error ? error.message : "Erro desconhecido",
+      }));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <form action={createAddress}>
+    <form onSubmit={handleSubmit}>
       {formState.error && (
         <p className="text-red-500 mb-4">{formState.error}</p>
       )}
       <div className="space-y-4">
-        <div>
-          <Label>CEP</Label>
+        <div className="space-y-1">
+          <Label>CEP (opcional)</Label>
           <Input
             name="zipCode"
             value={formState.zipCode}
             onChange={(e) => handleZipCodeChange(e.target.value)}
+            placeholder="Ex.: 12345-678"
           />
         </div>
-        <div>
-          <Label>Rua</Label>
-          <Input
-            name="street"
-            value={formState.street}
-            onChange={(e) =>
-              setFormState((prev) => ({ ...prev, street: e.target.value }))
-            }
-            required
-          />
+        <div className="grid grid-cols-3 gap-2">
+          <div className="space-y-1 col-span-2">
+            <Label>Rua</Label>
+            <Input
+              name="street"
+              value={formState.street}
+              onChange={(e) =>
+                setFormState((prev) => ({ ...prev, street: e.target.value }))
+              }
+              required
+            />
+          </div>
+          <div className="space-y-1 ">
+            <Label>Número</Label>
+            <Input
+              name="number"
+              value={formState.number}
+              onChange={(e) =>
+                setFormState((prev) => ({ ...prev, number: e.target.value }))
+              }
+              required
+            />
+          </div>
         </div>
-        <div>
-          <Label>Número</Label>
-          <Input
-            name="number"
-            value={formState.number}
-            onChange={(e) =>
-              setFormState((prev) => ({ ...prev, number: e.target.value }))
-            }
-            required
-          />
+
+        <div className="flex gap-2">
+          <div className="space-y-1">
+            <Label>Cidade</Label>
+            <Input
+              name="city"
+              value={restaurantCity.name}
+              readOnly
+              className="bg-gray-100 cursor-not-allowed"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Estado</Label>
+            <Input
+              name="state"
+              value={restaurantState}
+              readOnly
+              className="bg-gray-100 cursor-not-allowed"
+            />
+          </div>
         </div>
-        <div>
-          <Label>Cidade</Label>
-          <Input
-            name="city"
-            value={restaurantCity.name}
-            readOnly
-            className="bg-gray-100 cursor-not-allowed"
-          />
-        </div>
-        <div>
+
+        <div className="space-y-1">
           <Label>Localidade (Bairro)</Label>
           <Select
             name="localityId"
@@ -187,17 +215,31 @@ export default function AddressForm({
             </SelectContent>
           </Select>
         </div>
-        <div>
-          <Label>Estado</Label>
+        <div className="space-y-1">
+          <Label>Referência (opcional)</Label>
           <Input
-            name="state"
-            value={formState.state}
+            name="reference"
+            value={formState.reference}
             onChange={(e) =>
-              setFormState((prev) => ({ ...prev, state: e.target.value }))
+              setFormState((prev) => ({ ...prev, reference: e.target.value }))
             }
+            placeholder="Ex.: fundos, portão preto"
           />
         </div>
-        <Button type="submit">Salvar Endereço</Button>
+        <div className="space-y-1">
+          <Label>Observações (opcional)</Label>
+          <Input
+            name="observation"
+            value={formState.observation}
+            onChange={(e) =>
+              setFormState((prev) => ({ ...prev, observation: e.target.value }))
+            }
+            placeholder="Ex.: apertar campainha, entregar ao porteiro"
+          />
+        </div>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Salvando..." : "Salvar Endereço"}
+        </Button>
       </div>
     </form>
   );

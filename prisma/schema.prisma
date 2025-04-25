@@ -22,8 +22,8 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
-  addresses     Address[] // Um usuário pode ter vários endereços
-  orders        Order[] // Um usuário pode ter vários pedidos
+  addresses     Address[]
+  orders        Order[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -70,7 +70,7 @@ model VerificationToken {
 
 model RestaurantCity {
   id        String   @id @default(uuid())
-  name      String // Nome da cidade (ex.: "São Paulo")
+  name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -78,33 +78,35 @@ model RestaurantCity {
 }
 
 model Address {
-  id         String   @id @default(uuid())
-  userId     String
-  street     String
-  number     String
-  city       String?
-  state      String?
-  zipCode    String
-  localityId String?
-  isDefault  Boolean  @default(false) // Apenas um endereço é padrão
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          String   @id @default(uuid())
+  userId      String
+  street      String
+  number      String
+  city        String?
+  state       String?
+  zipCode     String?
+  localityId  String?
+  isDefault   Boolean  @default(false)
+  reference   String? // (ex.: "fundos, portão preto")
+  observation String? // (ex.: "apertar campainha")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orders   Order[] // Endereço usado em pedidos
-  locality Locality? @relation(fields: [localityId], references: [id], onDelete: Cascade) // Relação com Locality
+  orders   Order[]
+  locality Locality? @relation(fields: [localityId], references: [id], onDelete: Cascade)
 }
 
 model Locality {
   id          String   @id @default(uuid())
   name        String // Nome da localidade (ex.: "Centro", "Ipiranga")
   deliveryFee Float // Valor do frete para essa localidade (ex.: 5.00, 7.00)
-  cityId      String // Relaciona à cidade do restaurante
+  cityId      String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   city      RestaurantCity @relation(fields: [cityId], references: [id], onDelete: Cascade)
-  addresses Address[] // Endereços associados a essa localidade
+  addresses Address[]
 }
 
 model Order {
@@ -112,18 +114,18 @@ model Order {
   userId         String
   addressId      String
   total          Float
-  deliveryFee    Float? // Novo campo: valor do frete (null se retirada no local)
+  deliveryFee    Float? // valor do frete (null se retirada no local)
   status         Status        @default(PENDING) // Ex.: "pending", "delivered", "canceled"
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
-  paymentMethod  PaymentMethod // Novo campo: método de pagamento
-  requiresChange Boolean? // Novo campo: precisa de troco? (null se não for CASH) 
-  changeFor      Float? // Novo campo: quanto de troco? (null se não for CASH)
+  paymentMethod  PaymentMethod
+  requiresChange Boolean? // precisa de troco? (null se não for CASH) 
+  changeFor      Float? // quanto de troco? (null se não for CASH)
   isDelivery     Boolean       @default(true)
 
   user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   address Address     @relation(fields: [addressId], references: [id])
-  items   OrderItem[] // Itens do pedido
+  items   OrderItem[]
 }
 
 enum PaymentMethod {
@@ -139,7 +141,7 @@ model Category {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  products Product[] // Uma categoria tem vários produtos
+  products Product[]
 }
 
 model Product {
@@ -149,10 +151,10 @@ model Product {
   price       Float?
   categoryId  String
   discount    Float? // Opcional, null se não houver desconto
-  imageUrl    String? // Novo campo para URL da imagem (opcional)
+  imageUrl    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  isHalfHalf  Boolean? // Novo campo para indicar se o produto é meio a meio
+  isHalfHalf  Boolean? // campo para indicar se o produto é meio a meio
 
   category         Category    @relation(fields: [categoryId], references: [id])
   orderItems       OrderItem[] // Produtos aparecem em itens de pedido
@@ -189,7 +191,7 @@ model OrderItem {
   priceAtTime Float // Preço no momento do pedido
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  observation String? // Observação do cliente
+  observation String?
 
   order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product     Product      @relation(fields: [productId], references: [id])
