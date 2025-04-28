@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { db } from "../_lib/prisma";
-import { auth } from "../api/auth/[...nextauth]/route";
+
 import OrderList from "./_components/OrderList";
+import { auth } from "@/auth";
 
 const OrdersPage = async () => {
   const session = await auth();

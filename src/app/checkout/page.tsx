@@ -1,7 +1,8 @@
 import CheckoutClient from "./_components/CheckoutClient";
-import { auth } from "../api/auth/[...nextauth]/route";
+
 import { redirect } from "next/navigation";
 import { db } from "../_lib/prisma";
+import { auth } from "@/auth";
 
 export default async function CheckoutPage() {
   const session = await auth();

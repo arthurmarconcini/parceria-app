@@ -20,6 +20,7 @@ model User {
   emailVerified DateTime?
   password      String?
   image         String?
+  role          Role      @default(USER)
   accounts      Account[]
   sessions      Session[]
   addresses     Address[]
@@ -27,6 +28,12 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  USER
+  ADMIN
+  CASHIER
 }
 
 model Account {

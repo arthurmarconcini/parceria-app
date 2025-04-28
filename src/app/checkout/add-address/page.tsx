@@ -1,7 +1,8 @@
 import { db } from "@/app/_lib/prisma";
-import { auth } from "@/app/api/auth/[...nextauth]/route";
+
 import { redirect } from "next/navigation";
 import AddressForm from "./_components/AddressForm";
+import { auth } from "@/auth";
 
 export default async function AddAddressPage() {
   const session = await auth();

@@ -5,6 +5,7 @@ import {
   CardTitle,
 } from "@/app/_components/ui/card";
 import currencyFormat from "@/app/_helpers/currency-format";
+import { translateStatus } from "@/app/_helpers/translate-status";
 import { Prisma } from "@prisma/client";
 import Image from "next/image";
 
@@ -28,9 +29,14 @@ interface OrderItemProps {
 const OrderItem = ({ order }: OrderItemProps) => {
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between flex-wrap">
-        <CardTitle>{`Pedido #${order.id}`}</CardTitle>
-        <p className="text-sm ">{order.createdAt.toLocaleDateString()}</p>
+      <CardHeader className="flex-row items-start justify-between">
+        <div>
+          <CardTitle>{`Pedido #${order.id}`}</CardTitle>
+          <p className="text-sm ">{order.createdAt.toLocaleDateString()}</p>
+        </div>
+        <h2 className="text-semibold text-primary">
+          {translateStatus(order.status)}
+        </h2>
       </CardHeader>
       <CardContent>
         <ul>

@@ -1,33 +1,16 @@
-"use client";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import LoginForm from "./_components/LoginForm";
 
-import { signIn } from "next-auth/react";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "../_components/ui/button";
-import { Input } from "../_components/ui/input"; // Presumo que você tenha este componente do shadcn
+export default async function LoginPage() {
+  const session = await auth();
 
-const LoginPage = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const router = useRouter();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-
-    if (result?.ok) {
-      router.push("/"); // Redireciona para a página inicial
-    } else {
-      console.error("Erro no login");
-    }
-  };
+  if (session?.user) {
+    redirect("/");
+  }
 
   return (
-    <div className="min-h-screen  flex justify-center bg-background p-4">
+    <div className="min-h-screen flex justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-2">
         <div className="text-center m-6">
           <h1 className="text-2xl font-bold text-foreground">Bem-vindo</h1>
@@ -36,52 +19,17 @@ const LoginPage = () => {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
-              className="w-full"
-            />
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Senha"
-              className="w-full"
-            />
-          </div>
-
-          <Button type="submit" className="w-full">
-            Entrar
-          </Button>
-        </form>
+        <LoginForm />
 
         <div className="text-center space-y-4">
-          <Button
-            variant="outline"
-            onClick={() => router.push("/")}
-            className="w-full"
-          >
-            Continuar como convidado
-          </Button>
-
           <p className="text-sm text-muted-foreground">
             Se não tiver conta,{" "}
-            <Button
-              variant="link"
-              onClick={() => router.push("/register")}
-              className="p-0 h-auto font-bold"
-            >
+            <a href="/register" className="font-bold text-foreground">
               cadastre-se
-            </Button>
+            </a>
           </p>
         </div>
       </div>
     </div>
   );
-};
-
-export default LoginPage;
+}
