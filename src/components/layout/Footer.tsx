@@ -1,7 +1,7 @@
 // components/Footer.jsx
 import { Instagram, Facebook, MapPin, Phone, Utensils } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/app/_components/ui/button";
+import { Button } from "@/components/ui/button";
 
 export default function Footer() {
   return (

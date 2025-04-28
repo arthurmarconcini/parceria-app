@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { Button } from "../_components/ui/button";
-import { Input } from "../_components/ui/input"; // Assumindo que você tem este componente
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+// Assumindo que você tem este componente
 
 export default function RegisterPage() {
   const [name, setName] = useState("");

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { db } from "../_lib/prisma";
+import { db } from "../../lib/prisma";
 
 import OrderList from "./_components/OrderList";
 import { auth } from "@/auth";

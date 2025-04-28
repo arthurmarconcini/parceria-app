@@ -1,5 +1,5 @@
 // app/api/products/route.ts
-import { db } from "@/app/_lib/prisma";
+import { db } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 // Certifique-se de configurar o Prisma em lib/prisma.ts
 

@@ -1,6 +1,6 @@
-import { ScrollArea, ScrollBar } from "@/app/_components/ui/scroll-area";
 import { Prisma } from "@prisma/client";
 import ProductCard from "./ProductCard";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface ProductListProps {
   products: Prisma.ProductGetPayload<{

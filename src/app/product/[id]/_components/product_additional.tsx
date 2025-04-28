@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@/app/_components/ui/button";
-import currencyFormat from "@/app/_helpers/currency-format";
+import { Button } from "@/components/ui/button";
+import currencyFormat from "@/helpers/currency-format";
 import { Prisma } from "@prisma/client";
 import { MinusIcon, PlusIcon } from "lucide-react";
 import OptionsTitle from "./options_title";

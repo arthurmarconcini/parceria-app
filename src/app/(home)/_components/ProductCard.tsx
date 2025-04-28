@@ -1,12 +1,13 @@
 // components/ProductCard.jsx
 "use client";
 
-import currencyFormat from "@/app/_helpers/currency-format";
+import currencyFormat from "@/helpers/currency-format";
 import { Prisma } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/app/_components/ui/button";
+
 import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface ProductCardProps {
   product: Prisma.ProductGetPayload<{

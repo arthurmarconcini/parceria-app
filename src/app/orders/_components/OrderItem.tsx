@@ -1,11 +1,6 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/app/_components/ui/card";
-import currencyFormat from "@/app/_helpers/currency-format";
-import { translateStatus } from "@/app/_helpers/translate-status";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import currencyFormat from "@/helpers/currency-format";
+import { translateStatus } from "@/helpers/translate-status";
 import { Prisma } from "@prisma/client";
 import Image from "next/image";
 

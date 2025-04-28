@@ -1,6 +1,6 @@
 import { Trash2Icon, MinusIcon, PlusIcon } from "lucide-react";
 import { Button } from "../../ui/button";
-import { CartItem, useCartStore } from "@/app/_hooks/cartStore";
+import { CartItem, useCartStore } from "@/hooks/cartStore";
 
 interface QuantityButtonProps {
   product: CartItem;

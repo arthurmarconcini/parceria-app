@@ -1,4 +1,4 @@
-import { db } from "@/app/_lib/prisma";
+import { db } from "@/lib/prisma";
 
 import { redirect } from "next/navigation";
 import AddressForm from "./_components/AddressForm";

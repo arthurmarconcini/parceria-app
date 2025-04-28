@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/app/_components/ui/button";
-import { Input } from "@/app/_components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { loginAction } from "../actions"; // Server Action que criaremos
 export default function LoginForm() {
   const [email, setEmail] = useState("");

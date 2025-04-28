@@ -1,7 +1,7 @@
 import Image from "next/image";
-import type { CartItem } from "../../_hooks/cartStore";
-import currencyFormat from "../../_helpers/currency-format";
-import QuantityButton from "./_components/quantityButton";
+import type { CartItem } from "../../hooks/cartStore";
+import currencyFormat from "../../helpers/currency-format";
+import QuantityButton from "./components/quantityButton";
 
 interface CartItemProps {
   item: CartItem;

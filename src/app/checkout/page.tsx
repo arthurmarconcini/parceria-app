@@ -1,7 +1,7 @@
 import CheckoutClient from "./_components/CheckoutClient";
 
 import { redirect } from "next/navigation";
-import { db } from "../_lib/prisma";
+import { db } from "../../lib/prisma";
 import { auth } from "@/auth";
 
 export default async function CheckoutPage() {

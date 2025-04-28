@@ -3,15 +3,15 @@
 import { Prisma } from "@prisma/client";
 import { useState } from "react";
 
-import currencyFormat from "@/app/_helpers/currency-format";
-import { Button } from "@/app/_components/ui/button";
+import currencyFormat from "@/helpers/currency-format";
+import { Button } from "@/components/ui/button";
 import ProductAdditionals from "./product_additional";
 import ProductOptions from "./product_options";
 import PizzaHalfHalf from "./pizza_halfhalf";
 import OptionsTitle from "./options_title";
 import { MessageCircleMoreIcon } from "lucide-react";
-import { Textarea } from "@/app/_components/ui/textarea";
-import { CartItem, useCartStore } from "@/app/_hooks/cartStore";
+import { Textarea } from "@/components/ui/textarea";
+import { CartItem, useCartStore } from "@/hooks/cartStore";
 
 // Componente cliente para lógica interativa
 interface ProductClientProps {

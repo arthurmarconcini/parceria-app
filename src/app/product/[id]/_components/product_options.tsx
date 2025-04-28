@@ -1,5 +1,5 @@
 import { Size } from "@prisma/client";
-import currencyFormat from "@/app/_helpers/currency-format";
+import currencyFormat from "@/helpers/currency-format";
 import OptionsTitle from "./options_title";
 
 interface ProductOptionsProps {

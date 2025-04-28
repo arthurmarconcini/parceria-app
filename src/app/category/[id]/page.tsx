@@ -1,5 +1,5 @@
-import currencyFormat from "@/app/_helpers/currency-format";
-import { db } from "@/app/_lib/prisma";
+import currencyFormat from "@/helpers/currency-format";
+import { db } from "@/lib/prisma";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -40,7 +40,7 @@ const CategoryPage = async ({ params }: CategoryPageProps) => {
               <h1 className="text-sm font-bold">{product.name}</h1>
               <h2 className="font-semibold text-xs">{product.id}</h2>
               <p className="text-xs text-muted-foreground">
-                {currencyFormat(product.price)}
+                {currencyFormat(Number(product.price))}
               </p>
             </div>
             <div className="w-28 h-20 relative overflow-hidden flex-shrink-0">

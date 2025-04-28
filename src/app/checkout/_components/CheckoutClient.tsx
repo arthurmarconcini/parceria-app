@@ -1,18 +1,7 @@
 "use client";
 
-import { Button } from "@/app/_components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/app/_components/ui/card";
-import { Checkbox } from "@/app/_components/ui/checkbox";
-import { Input } from "@/app/_components/ui/input";
-import { Label } from "@/app/_components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/app/_components/ui/radio-group";
-import currencyFormat from "@/app/_helpers/currency-format";
-import { useCartStore } from "@/app/_hooks/cartStore";
+import currencyFormat from "@/helpers/currency-format";
+import { useCartStore } from "@/hooks/cartStore";
 
 import { Address, PaymentMethod } from "@prisma/client";
 
@@ -20,6 +9,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import ConfirmDeleteAddressDialog from "./ConfirmDeleteAddressDialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 
 type CheckoutClientProps = {
   addresses: Address[];

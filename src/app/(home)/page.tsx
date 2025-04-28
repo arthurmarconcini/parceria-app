@@ -1,10 +1,9 @@
-// pages/index.jsx
-
 import { auth } from "@/auth";
-import Footer from "../_components/Footer";
-import { db } from "../_lib/prisma";
+
+import { db } from "../../lib/prisma";
 import CategoryList from "./_components/CategoryList";
 import ProductList from "./_components/ProductList";
+import Footer from "@/components/layout/Footer";
 
 export default async function Home() {
   const categories = await db.category.findMany({

@@ -1,12 +1,16 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { Button } from "./ui/button";
+
 import { MoveLeftIcon, User } from "lucide-react";
-import Cart from "./cart/Cart";
+
 import { useSession } from "next-auth/react";
-import ProfileMenu from "./ProfileMenu";
+
 import Link from "next/link";
+
+import { Button } from "@/components/ui/button";
+import Cart from "@/components/cart/Cart";
+import ProfileMenu from "@/components/ProfileMenu";
 
 const Header = () => {
   const router = useRouter();

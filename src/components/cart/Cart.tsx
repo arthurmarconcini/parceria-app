@@ -1,6 +1,6 @@
 "use client";
 
-import { useCartStore } from "../../_hooks/cartStore";
+import { useCartStore } from "../../hooks/cartStore";
 import CartItem from "./CartItem";
 import { Button } from "../ui/button";
 import {
@@ -11,7 +11,7 @@ import {
   SheetTrigger,
 } from "../ui/sheet";
 import { ScrollArea, ScrollBar } from "../ui/scroll-area";
-import currencyFormat from "@/app/_helpers/currency-format";
+import currencyFormat from "@/helpers/currency-format";
 import { ShoppingCartIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";

@@ -8,8 +8,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/app/_components/ui/alert-dialog";
-import { Button } from "@/app/_components/ui/button";
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { Trash2Icon } from "lucide-react";
 
 interface ConfirmDeleteAddressDialogProps {

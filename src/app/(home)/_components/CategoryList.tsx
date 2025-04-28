@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@/app/_components/ui/button";
-import { ScrollArea, ScrollBar } from "@/app/_components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Category } from "@prisma/client";
 import Link from "next/link";
 

@@ -1,8 +1,8 @@
-import { db } from "@/app/_lib/prisma";
+import { db } from "@/lib/prisma";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 
-import currencyFormat from "@/app/_helpers/currency-format";
+import currencyFormat from "@/helpers/currency-format";
 
 import { ProductClient } from "./_components/product_cliente";
 
