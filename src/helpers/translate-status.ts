@@ -5,6 +5,7 @@ import { Status } from "@prisma/client";
 // Mapa de tradução dos status para português
 const statusTranslations: Record<Status, string> = {
   PENDING: "Pendente",
+  IN_PREPARATION: "Em Preparação",
   IN_TRANSIT: "Em Trânsito",
   DELIVERED: "Entregue",
   CANCELED: "Cancelado",
