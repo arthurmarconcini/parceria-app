@@ -58,12 +58,27 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const today = new Date().toISOString().split("T")[0];
+
+  const ordersToday = await db.order.count({
+    where: {
+      createdAt: {
+        gte: new Date(today), // Pedidos a partir de 00:00 do dia atual
+        lt: new Date(new Date(today).setDate(new Date(today).getDate() + 1)), // Até 00:00 do próximo dia
+      },
+    },
+  });
+
+  const nextOrderNumber = String(ordersToday + 1).padStart(3, "0"); // Garante 3 dígitos (ex.: 001)
+  const orderNumber = `${today}-${nextOrderNumber}`; // Ex.: 2025-05-07-001
+
   try {
     const order = await db.order.create({
       data: {
         userId,
         addressId,
         total,
+        orderNumber: orderNumber, // Garante que orderNumber seja uma string
         paymentMethod: paymentMethod as PaymentMethod, // Garante que o tipo seja correto
         requiresChange: paymentMethod === "CASH" ? requiresChange : null,
         changeFor:

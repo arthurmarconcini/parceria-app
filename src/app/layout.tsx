@@ -4,6 +4,7 @@ import "./globals.css";
 
 import AuthProvider from "../providers/AuthProvider";
 import Header from "@/components/layout/Header";
+import { Toaster } from "@/components/ui/sonner";
 
 const roboto = Roboto({
   subsets: ["latin"],
@@ -26,6 +27,7 @@ export default function RootLayout({
         <AuthProvider>
           <Header />
           {children}
+          <Toaster />
         </AuthProvider>
       </body>
     </html>

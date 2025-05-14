@@ -118,6 +118,7 @@ model Locality {
 
 model Order {
   id             String        @id @default(uuid())
+  orderNumber    String        @unique
   userId         String
   addressId      String
   total          Float

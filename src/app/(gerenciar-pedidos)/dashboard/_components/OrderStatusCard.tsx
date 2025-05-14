@@ -32,16 +32,18 @@ const OrderStatusCard = ({ orders, status }: OrderStatusCardProps) => {
   const colorClass = getColorClass(status);
 
   return (
-    <Card className={`${colorClass} min-h-[500px]`}>
+    <Card className={`${colorClass}`}>
       <CardHeader>
         <CardTitle>{`${translateStatus(status)} (${orders.length})`}</CardTitle>
       </CardHeader>
       <CardContent>
-        <ul className="space-y-2">
-          {orders.map((order, index) => (
+        <ul className="space-y-2 overflow-scroll h-[500px]">
+          {orders.map((order) => (
             <li key={order.id} className="bg-white rounded-xs p-2">
               <div className="flex items-center justify-between">
-                <h1 className="font-bold text-lg">{`Pedido #${index + 1}`}</h1>
+                <h1 className="font-bold text-lg">{`Pedido #${
+                  order.orderNumber.split(`-`)[3]
+                }`}</h1>
                 <h2 className="text-xs">
                   {order.createdAt.toLocaleString("pt-BR", {
                     dateStyle: "short",
@@ -63,7 +65,9 @@ const OrderStatusCard = ({ orders, status }: OrderStatusCardProps) => {
                   ))}
                 <p className="mt-1 font-bold">{currencyFormat(order.total)}</p>
 
-                <OrderStatusCardButtons status={status} orderId={order.id} />
+                {status !== "DELIVERED" ? (
+                  <OrderStatusCardButtons status={status} orderId={order.id} />
+                ) : null}
               </div>
             </li>
           ))}

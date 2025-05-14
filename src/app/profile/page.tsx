@@ -1,5 +1,4 @@
 import { auth } from "@/auth";
-import { redirect } from "next/navigation";
 
 const ProfilePage = async () => {
   const session = await auth();
@@ -7,9 +6,7 @@ const ProfilePage = async () => {
   if (!session || !session.user) {
     return null;
   }
-  if (session.user.role !== "ADMIN") {
-    redirect("/");
-  }
+
   return (
     <div className="flex flex-col min-h-screen">
       <main className="flex-grow">

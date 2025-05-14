@@ -44,7 +44,8 @@ const ProductCard = ({ product }: ProductCardProps) => {
           </h1>
           {product.isHalfHalf ? (
             <p className="text-xs text-muted-foreground">
-              a partir de {currencyFormat(product.Size[0].price!)}
+              a partir de{" "}
+              {currencyFormat(product.Size[0].price! | product.price!)}
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">
