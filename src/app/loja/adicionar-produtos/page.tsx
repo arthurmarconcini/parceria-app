@@ -6,20 +6,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
+
 import { db } from "@/lib/prisma";
 import AddProduct from "./components/AddProduct";
 import { formatBRL } from "@/helpers/currency-format";
 import ConfirmDeleteProductDialog from "./components/ConfirmDeleteProductDialog";
 
 const AddProductsPage = async () => {
-  const session = await auth();
-
-  if (!session || !session.user || session.user.role === "USER") {
-    return redirect("/");
-  }
-
   const products = await db.product.findMany({
     include: {
       category: true,
