@@ -16,7 +16,7 @@ import { Monitor, Barcode } from "lucide-react";
 const itens = [
   {
     title: "Gestor de pedidos",
-    url: "/loja/dashboard",
+    url: "/loja/gestor",
     icon: Monitor,
   },
   {
