@@ -116,7 +116,7 @@ const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
           )}
 
           <div className="mb-5">
-            <PrintOrderReceipt orderId={pedido.id} />
+            <PrintOrderReceipt order={pedido} />
           </div>
 
           {pedido.status !== "DELIVERED" && (
