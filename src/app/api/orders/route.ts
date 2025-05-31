@@ -128,19 +128,41 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Define para o início do dia (00:00:00)
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1); // Define para o início do próximo dia
+
     const orders = await db.order.findMany({
-      include: {
-        items: true,
-        user: true,
-        address: true,
+      where: {
+        createdAt: {
+          gte: today, // Maior ou igual ao início de hoje
+          lt: tomorrow,  // Menor que o início de amanhã
+        },
       },
+      include: {
+        user: { select: { name: true, email: true, id: true } },
+        address: { include: { locality: true } },
+        items: {
+          include: {
+            product: true,
+            Size: true,
+            orderExtras: { include: { extra: true } },
+            HalfHalf: { include: { firstHalf: true, secondHalf: true } },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      }
     });
 
     return NextResponse.json(orders, { status: 200 });
   } catch (error) {
-    console.error("Erro ao buscar pedidos:", error);
+    console.error("Erro ao buscar pedidos do dia:", error);
     return NextResponse.json(
-      { error: "Erro ao buscar pedidos." },
+      { error: "Erro ao buscar pedidos do dia." },
       { status: 500 }
     );
   }

@@ -20,7 +20,7 @@ interface ProductCardProps {
 const ProductCard = ({ product }: ProductCardProps) => {
   return (
     <div className="flex flex-col space-y-1 max-w-[200px] group transition-all duration-200 hover:shadow-lg hover:border-primary rounded-md p-2 relative">
-      <Link href={`/product/${product.id}`}>
+      <Link href={`/produto/${product.id}`}>
         <div className="w-[200px] h-[180px] relative rounded-md overflow-hidden">
           <Image
             src={
