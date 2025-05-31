@@ -36,10 +36,10 @@ const Dashboard = async () => {
   }
 
   return (
-    <div className="container mx-auto">
+    <div className="container flex items-center justify-center">
       <div className="flex flex-col items-center gap-8">
         <h1 className="text-2xl font-bold mt-16">Gerenciador de pedidos</h1>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {status.map((status) => {
             const filteredOrders = orders.filter(
               (order) => order.status === status

@@ -1,10 +1,11 @@
 import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 
 const ProfilePage = async () => {
   const session = await auth();
 
   if (!session || !session.user) {
-    return null;
+    return redirect("/login");
   }
 
   return (

@@ -125,3 +125,23 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export async function GET() {
+  try {
+    const orders = await db.order.findMany({
+      include: {
+        items: true,
+        user: true,
+        address: true,
+      },
+    });
+
+    return NextResponse.json(orders, { status: 200 });
+  } catch (error) {
+    console.error("Erro ao buscar pedidos:", error);
+    return NextResponse.json(
+      { error: "Erro ao buscar pedidos." },
+      { status: 500 }
+    );
+  }
+}

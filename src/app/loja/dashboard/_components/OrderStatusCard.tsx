@@ -3,6 +3,7 @@ import currencyFormat from "@/helpers/currency-format";
 import { Prisma, Status } from "@prisma/client";
 import OrderStatusCardButtons from "./OrderStatusCardButtons";
 import { translateStatus } from "@/helpers/translate-status";
+import PrintOrderReceipt from "./PrintOrderReceipt";
 
 interface OrderStatusCardProps {
   orders: Prisma.OrderGetPayload<{
@@ -32,7 +33,7 @@ const OrderStatusCard = ({ orders, status }: OrderStatusCardProps) => {
   const colorClass = getColorClass(status);
 
   return (
-    <Card className={`${colorClass}`}>
+    <Card className={`${colorClass} min-w-[400px]`}>
       <CardHeader>
         <CardTitle>{`${translateStatus(status)} (${orders.length})`}</CardTitle>
       </CardHeader>
@@ -64,6 +65,7 @@ const OrderStatusCard = ({ orders, status }: OrderStatusCardProps) => {
                     </p>
                   ))}
                 <p className="mt-1 font-bold">{currencyFormat(order.total)}</p>
+                <PrintOrderReceipt orderId={order.id} />
 
                 {status !== "DELIVERED" ? (
                   <OrderStatusCardButtons status={status} orderId={order.id} />

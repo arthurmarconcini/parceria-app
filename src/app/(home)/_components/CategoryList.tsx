@@ -14,7 +14,7 @@ const CategoryList = ({ categories }: CategoryListProps) => {
     <ScrollArea>
       <div className="flex w-max space-x-2 gap-1 px-4 mt-6">
         {categories.map((category) => (
-          <Link key={category.id} href={`/category/${category.id}`}>
+          <Link key={category.id} href={`/categorias/${category.id}`}>
             <Button>{category.name}</Button>
           </Link>
         ))}
