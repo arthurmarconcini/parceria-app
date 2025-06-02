@@ -1,19 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
-
-import DynamicLucideIcon from "@/components/DynamicLucideIcon";
-import { categoryIconMap, LucideIconName } from "@/lib/categoryIcons";
+import { Button } from "@/components/ui/button"; //
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; //
+import { cn } from "@/lib/utils"; //
+import DynamicLucideIcon, {
+  LucideIconName,
+} from "@/components/DynamicLucideIcon"; //
+import { categoryIconMap } from "@/lib/categoryIcons"; //
 
 type Category = {
-  name: string;
   id: string;
-  createdAt: Date;
-  updatedAt: Date;
+  name: string;
 };
 
 interface CategoryListProps {
@@ -31,7 +30,6 @@ const CategoryList = ({
     <ScrollArea className="w-full">
       <div className="flex w-max space-x-2 gap-1 px-4 mt-6">
         {categories.map((category) => {
-          // Garante que o nome do ícone é do tipo correto
           const iconName: LucideIconName =
             categoryIconMap[category.name] || categoryIconMap.default;
 
@@ -47,8 +45,8 @@ const CategoryList = ({
                 className={cn(
                   "rounded-full flex items-center gap-2 px-4 py-2 transition-all duration-200",
                   selected === category.id
-                    ? "bg-primary text-white shadow-lg"
-                    : "bg-white text-gray-700 hover:bg-gray-100"
+                    ? "bg-primary text-primary-foreground shadow-lg"
+                    : "bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground"
                 )}
               >
                 <DynamicLucideIcon name={iconName} size={18} />

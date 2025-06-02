@@ -1,4 +1,3 @@
-// components/DynamicLucideIcon.tsx
 import dynamic from "next/dynamic";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { LucideProps } from "lucide-react";
@@ -10,6 +9,12 @@ interface DynamicLucideIconProps extends LucideProps {
 }
 
 const DynamicLucideIcon = ({ name, ...props }: DynamicLucideIconProps) => {
+  if (!dynamicIconImports[name]) {
+    console.warn(`Lucide icon "${name}" not found. Rendering default or null.`);
+
+    const DefaultIcon = dynamic(dynamicIconImports);
+    return <DefaultIcon {...props} />;
+  }
   const LucideIcon = dynamic(dynamicIconImports[name]);
   return <LucideIcon {...props} />;
 };
