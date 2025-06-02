@@ -1,4 +1,3 @@
-// src/app/(home)/_components/ProductList.tsx
 import { Prisma } from "@prisma/client";
 import ProductCard from "./ProductCard";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";

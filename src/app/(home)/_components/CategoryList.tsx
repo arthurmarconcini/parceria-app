@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button"; //
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; //
-import { cn } from "@/lib/utils"; //
-import DynamicLucideIcon, {
-  LucideIconName,
-} from "@/components/DynamicLucideIcon"; //
-import { categoryIconMap } from "@/lib/categoryIcons"; //
+import { Button } from "@/components/ui/button";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
+
+import {
+  getIconComponentForCategory,
+  type IconComponentType,
+} from "@/lib/categoryIcons";
 
 type Category = {
   id: string;
@@ -26,12 +27,21 @@ const CategoryList = ({
 }: CategoryListProps) => {
   const [selected, setSelected] = useState(selectedCategoryId);
 
+  if (!categories || categories.length === 0) {
+    return (
+      <p className="px-4 mt-6 text-muted-foreground">
+        Nenhuma categoria encontrada.
+      </p>
+    );
+  }
+
   return (
     <ScrollArea className="w-full">
       <div className="flex w-max space-x-2 gap-1 px-4 mt-6">
         {categories.map((category) => {
-          const iconName: LucideIconName =
-            categoryIconMap[category.name] || categoryIconMap.default;
+          const IconComponent: IconComponentType = getIconComponentForCategory(
+            category.name
+          );
 
           return (
             <Link
@@ -49,7 +59,11 @@ const CategoryList = ({
                     : "bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground"
                 )}
               >
-                <DynamicLucideIcon name={iconName} size={18} />
+                {IconComponent ? (
+                  <IconComponent size={18} aria-hidden="true" />
+                ) : (
+                  <span className="w-[18px] h-[18px]" />
+                )}
                 <span className="text-sm font-medium">{category.name}</span>
               </Button>
             </Link>
