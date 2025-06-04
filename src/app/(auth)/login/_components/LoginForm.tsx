@@ -4,22 +4,25 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { loginAction } from "../actions"; // Server Action que criaremos
+import { loginAction } from "../actions";
+import { useSession } from "next-auth/react";
+
 export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { update } = useSession();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    // Chama a Server Action
     const result = await loginAction({ email, password });
 
     if (result.success) {
-      router.push("/"); // Redireciona para a página inicial
+      await update();
+      router.push("/");
     } else {
       setError(result.error || "Erro ao fazer login");
     }

@@ -54,22 +54,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: "/login", // Define a página de login customizada
   },
   callbacks: {
-    jwt: async ({ token, user }) => {
-      if (user) {
-        token.id = user.id;
-        token.role = user.role; // Adiciona o role ao token
+    async jwt({ token, trigger, session }) {
+      if (trigger === "update") {
+        return { ...token, ...session.user };
       }
       return token;
     },
     session: async ({ session, token }) => {
       if (token) {
         session.user.id = token.id as string;
-        session.user.role = token.role as string; // Adiciona o role à sessão
+        session.user.role = token.role as string;
+        session.user.name = token.name as string | null | undefined; // Assegure a consistência de tipo com next-auth.d.ts
+        session.user.email = token.email as string; // Assegure a consistência de tipo com next-auth.d.ts// Adiciona o role à sessão
       }
       return session;
     },
   },
   session: {
-    strategy: "jwt", // Necessário para usar JWT com callbacks personalizados
+    strategy: "jwt", // Necessário para usar JWT com callbacks personalizados,
   },
 });

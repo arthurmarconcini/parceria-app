@@ -1,6 +1,6 @@
 "use server";
 
-import { signIn } from "@/auth"; // Importa a função signIn do NextAuth configurado
+import { signIn } from "@/auth";
 import { AuthError } from "next-auth";
 
 export async function loginAction(credentials: {
@@ -8,18 +8,25 @@ export async function loginAction(credentials: {
   password: string;
 }) {
   try {
-    // Tenta fazer o login com as credenciais fornecidas
     await signIn("credentials", {
       email: credentials.email,
       password: credentials.password,
-      redirect: false, // Não redireciona automaticamente, deixamos o cliente lidar com isso
+      redirect: false,
     });
 
     return { success: true };
   } catch (error) {
     if (error instanceof AuthError) {
-      return { success: false, error: "Credenciais inválidas" };
+      return {
+        success: false,
+        error: "Credenciais inválidas. Verifique seu e-mail e senha.",
+      };
     }
-    return { success: false, error: "Erro interno no servidor" };
+
+    console.error("Erro na loginAction:", error);
+    return {
+      success: false,
+      error: "Ocorreu um erro interno. Tente novamente mais tarde.",
+    };
   }
 }
