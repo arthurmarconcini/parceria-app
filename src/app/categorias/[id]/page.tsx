@@ -14,7 +14,7 @@ interface CategoryPageProps {
 }
 
 const CategoryPage = async ({ params }: CategoryPageProps) => {
-  const { id } = params;
+  const { id } = await params;
   const category = await db.category.findUnique({
     where: {
       id,

@@ -56,22 +56,21 @@ const CategoryProductItem = ({ product }: CategoryProductItemProps) => {
       orderExtras: [],
     };
 
-    addToCart(cartItemToAdd); //
-    toast.success(`${product.name} adicionado ao carrinho!`); //
+    addToCart(cartItemToAdd);
+    toast.success(`${product.name} adicionado ao carrinho!`);
   };
+
+  const isPizzaType =
+    product.price === null && product.Size && product.Size.length > 0; //
 
   let displayPrice = product.price;
   let originalPrice;
 
-  if (product.price === null && product.Size && product.Size.length > 0) {
-    const sortedSizes = [...product.Size].sort((a, b) => a.price - b.price);
-    displayPrice = sortedSizes[0]?.price ?? 0; //
-  }
-
-  if (displayPrice !== null && product.discount && product.discount > 0) {
-    //
-    originalPrice = displayPrice;
-    displayPrice = displayPrice * (1 - product.discount / 100); //
+  if (!isPizzaType && displayPrice !== null) {
+    if (product.discount && product.discount > 0) {
+      originalPrice = displayPrice;
+      displayPrice = displayPrice * (1 - product.discount / 100);
+    }
   }
 
   return (
@@ -80,7 +79,7 @@ const CategoryProductItem = ({ product }: CategoryProductItemProps) => {
       className="block w-full transition-colors hover:bg-muted/50"
       aria-label={`Ver detalhes de ${product.name}`}
     >
-      <div className="flex items-center gap-3 md:gap-4 p-3 md:p-4 border-b">
+      <div className="flex items-start gap-3 md:gap-4 p-3 md:p-4 border-b">
         <div className="relative w-20 h-20 md:w-24 md:h-24 flex-shrink-0">
           <Image
             src={
@@ -92,7 +91,7 @@ const CategoryProductItem = ({ product }: CategoryProductItemProps) => {
             className="object-cover rounded-md"
             sizes="(max-width: 768px) 20vw, 10vw"
           />
-          {product.discount && product.discount > 0 && (
+          {product.discount && product.discount > 0 && !isPizzaType && (
             <span className="absolute top-1 left-1 bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded">
               {product.discount}% OFF
             </span>
@@ -108,16 +107,21 @@ const CategoryProductItem = ({ product }: CategoryProductItemProps) => {
               {product.description}
             </p>
           )}
-          <div className="text-xs md:text-sm mt-1">
-            {product.price === null &&
-            product.Size &&
-            product.Size.length > 0 ? (
-              <p className="text-muted-foreground">
-                A partir de{" "}
-                <span className="text-foreground font-medium">
-                  {currencyFormat(displayPrice ?? 0)}
-                </span>
-              </p>
+          <div className="text-xs md:text-sm mt-2">
+            {isPizzaType ? (
+              <div className="space-y-1">
+                {product.Size.sort((a, b) => a.price - b.price).map((size) => (
+                  <div
+                    key={size.id}
+                    className="flex items-center justify-between text-xs"
+                  >
+                    <span className="text-muted-foreground">{size.name}</span>
+                    <span className="font-semibold text-foreground">
+                      {currencyFormat(size.price)}
+                    </span>
+                  </div>
+                ))}
+              </div>
             ) : displayPrice !== null ? (
               <p>
                 {originalPrice ? (
@@ -141,11 +145,11 @@ const CategoryProductItem = ({ product }: CategoryProductItemProps) => {
           </div>
         </div>
 
-        <div className="ml-auto flex-shrink-0">
+        <div className="ml-auto flex-shrink-0 pt-1">
           <Button
             variant="outline"
             size="icon"
-            className="rounded-full border-primary text-primary h-8 w-8 md:h-9 md:w-9 hover:bg-primary/10"
+            className="rounded-full border-primary text-primary h-8 w-8 md:h-9 md:w-9 hover:bg-primary/10 active:bg-primary/20" // Added active state
             onClick={handleQuickAdd}
             aria-label={`Adicionar ${product.name} ao carrinho`}
           >
