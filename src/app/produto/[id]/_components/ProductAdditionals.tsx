@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import currencyFormat from "@/helpers/currency-format";
 import { Prisma } from "@prisma/client";
 import { MinusIcon, PlusIcon } from "lucide-react";
-import OptionsTitle from "./options_title";
+import OptionsTitle from "./OptionsTitle";
 
 interface ProductAdditionalsProps {
   product: Prisma.ProductGetPayload<{

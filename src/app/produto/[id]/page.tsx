@@ -1,22 +1,18 @@
 import { db } from "@/lib/prisma";
-import Image from "next/image";
 import { notFound } from "next/navigation";
+import { ProductClient } from "./_components/ProductClient"; //
+import { Prisma } from "@prisma/client";
 
-import currencyFormat from "@/helpers/currency-format";
-
-import { ProductClient } from "./_components/product_cliente";
-
-interface ProductProps {
-  params: Promise<{ id: string }>;
+interface ProductPageProps {
+  params: { id: string };
 }
 
-const Product = async ({ params }: ProductProps) => {
+const ProductPage = async ({ params }: ProductPageProps) => {
   const { id } = await params;
 
   const product = await db.product.findUnique({
-    where: {
-      id,
-    },
+    //
+    where: { id },
     include: {
       Extras: true,
       Size: true,
@@ -24,43 +20,31 @@ const Product = async ({ params }: ProductProps) => {
     },
   });
 
-  const pizzas = await db.product.findMany({
-    where: {
-      categoryId: product?.categoryId,
-    },
-    include: {
-      Size: true,
-    },
-  });
-
   if (!product) {
+    //
     return notFound();
   }
 
-  return (
-    <div className="container mx-auto">
-      <div className="flex gap-4 justify-between p-4">
-        <Image
-          src={product.imageUrl!}
-          alt={product.name}
-          width={64}
-          height={64}
-          className="object-contain rounded-sm"
-        />
-        <div className="flex-1">
-          <h1 className="">{product.name}</h1>
-          <h2 className="text-sm">Pao, carne, queijo e salada</h2>
+  let pizzasForHalfHalf: Prisma.ProductGetPayload<{
+    include: { Size: true };
+  }>[] = [];
+  if (product.category.name.toLowerCase() === "pizzas" && product.isHalfHalf) {
+    pizzasForHalfHalf = await db.product.findMany({
+      //
+      where: {
+        categoryId: product.categoryId,
+      },
+      include: {
+        Size: true,
+      },
+    });
+  }
 
-          <p className="text-xs text-muted-foreground">
-            {!product.isHalfHalf
-              ? currencyFormat(product.price!)
-              : `a partir de ${currencyFormat(product.Size[0].price!)}`}
-          </p>
-        </div>
-      </div>
-      <ProductClient product={product} pizzas={pizzas} />
+  return (
+    <div className="pb-24">
+      <ProductClient product={product} pizzas={pizzasForHalfHalf} />
     </div>
   );
 };
 
-export default Product;
+export default ProductPage;
