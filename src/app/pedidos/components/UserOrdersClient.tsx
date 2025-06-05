@@ -1,0 +1,85 @@
+// src/app/pedidos/_components/UserOrdersClient.tsx
+
+"use client";
+
+import { Prisma } from "@prisma/client";
+import { useMemo, useState } from "react";
+import OrderCard from "./OrderCard";
+import { FiltersState, OrderFilters } from "./OrdersFilters";
+import OrderDetailDialog from "./OrderDetailDialog";
+
+export type DetailedOrder = Prisma.OrderGetPayload<{
+  include: {
+    items: {
+      include: {
+        product: true;
+        Size: true;
+        orderExtras: { include: { extra: true } };
+        HalfHalf: { include: { firstHalf: true; secondHalf: true } };
+      };
+    };
+    address: { include: { locality: true } };
+  };
+}>;
+
+interface UserOrdersClientProps {
+  orders: DetailedOrder[];
+}
+
+export const UserOrdersClient = ({ orders }: UserOrdersClientProps) => {
+  const [selectedOrder, setSelectedOrder] = useState<DetailedOrder | null>(
+    null
+  );
+  const [filters, setFilters] = useState<FiltersState>({
+    search: "",
+    date: null,
+  });
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      // Filtro de busca por nome do produto
+      const searchMatch =
+        filters.search.trim() === "" ||
+        order.items.some((item) =>
+          item.product.name.toLowerCase().includes(filters.search.toLowerCase())
+        );
+
+      // Filtro por data
+      const dateMatch =
+        !filters.date ||
+        new Date(order.createdAt).toDateString() ===
+          new Date(filters.date).toDateString();
+
+      return searchMatch && dateMatch;
+    });
+  }, [orders, filters]);
+
+  const handleOpenDetails = (order: DetailedOrder) => {
+    setSelectedOrder(order);
+  };
+
+  const handleCloseDetails = () => {
+    setSelectedOrder(null);
+  };
+
+  return (
+    <>
+      <OrderFilters filters={filters} onFilterChange={setFilters} />
+
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {filteredOrders.map((order) => (
+          <OrderCard
+            key={order.id}
+            order={order}
+            onSelectOrder={() => handleOpenDetails(order)}
+          />
+        ))}
+      </div>
+
+      <OrderDetailDialog
+        order={selectedOrder}
+        onOpenChange={handleCloseDetails}
+      />
+    </>
+  );
+};
