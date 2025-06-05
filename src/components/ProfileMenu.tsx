@@ -73,7 +73,7 @@ const ProfileMenu = () => {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link
-            href="/perfil"
+            href={`/perfil/`}
             className="flex items-center gap-2 cursor-pointer"
           >
             <User className="h-4 w-4" />
