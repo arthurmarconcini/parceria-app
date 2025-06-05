@@ -31,73 +31,74 @@ const ProductAdditionals = ({
     onExtraQuantityChange(extraId, extrasQuantities[extraId] - 1);
   };
 
+  if (!product.Extras || product.Extras.length === 0) {
+    return null;
+  }
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="w-full flex flex-col gap-4">
-        <div className="flex-1">
-          <OptionsTitle
-            title="Deseja adicionar algum ingrediente?"
-            description="Escolha os ingredientes"
-          />
-
-          {product.Extras.length === 0 ? (
-            <div className="p-6 flex items-center justify-center">
-              <h1 className="text-sm font-semibold">
-                Este produto não possui nenhuma opção de adicional
+    <div>
+      <OptionsTitle
+        title="Turbine seu pedido!"
+        description="Adicione mais sabor com nossos extras."
+      />
+      <div className="divide-y divide-border">
+        {product.Extras.map((extra) => (
+          <div
+            key={extra.id}
+            className="flex justify-between items-center p-4 hover:bg-muted/30 transition-colors"
+          >
+            <div className="flex-1 pr-2">
+              <h1 className="text-sm font-medium text-foreground">
+                {extra.name}
               </h1>
+              <p className="text-xs text-primary font-semibold">{`+ ${currencyFormat(
+                extra.price
+              )}`}</p>
             </div>
-          ) : (
-            <div>
-              {product.Extras.map((extra) => (
-                <div
-                  key={extra.id}
-                  className="flex justify-between items-center p-4 border-b border-b-muted"
-                >
-                  <div>
-                    <h1 className="text-sm ">{`Adicionar: ${extra.name}`}</h1>
-                    <p className="text-xs text-muted-foreground">{`+ ${currencyFormat(
-                      extra.price
-                    )}`}</p>
-                  </div>
 
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleExtraDecrement(extra.id)}
-                      disabled={extrasQuantities[extra.id] === 0}
-                    >
-                      <MinusIcon
-                        size={16}
-                        color={
-                          extrasQuantities[extra.id] > 0 ? "orange" : "gray"
-                        }
-                      />
-                    </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-8 w-8 rounded-full border-muted-foreground/50 hover:border-primary hover:bg-primary/10"
+                onClick={() => handleExtraDecrement(extra.id)}
+                disabled={extrasQuantities[extra.id] === 0}
+                aria-label={`Diminuir quantidade de ${extra.name}`}
+              >
+                <MinusIcon
+                  size={16}
+                  className={
+                    extrasQuantities[extra.id] > 0
+                      ? "text-primary"
+                      : "text-muted-foreground/70"
+                  }
+                />
+              </Button>
 
-                    <span className="w-8 text-center text-sm">
-                      {extrasQuantities[extra.id]}
-                    </span>
+              <span className="w-6 text-center text-sm font-medium text-foreground">
+                {extrasQuantities[extra.id]}
+              </span>
 
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleExtraIncrement(extra.id)}
-                      disabled={extrasQuantities[extra.id] >= 10}
-                    >
-                      <PlusIcon
-                        size={16}
-                        color={
-                          extrasQuantities[extra.id] < 10 ? "orange" : "gray"
-                        }
-                      />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-8 w-8 rounded-full border-muted-foreground/50 hover:border-primary hover:bg-primary/10"
+                onClick={() => handleExtraIncrement(extra.id)}
+                disabled={extrasQuantities[extra.id] >= 10}
+                aria-label={`Aumentar quantidade de ${extra.name}`}
+              >
+                <PlusIcon
+                  size={16}
+                  className={
+                    extrasQuantities[extra.id] < 10
+                      ? "text-primary"
+                      : "text-muted-foreground/70"
+                  }
+                />
+              </Button>
             </div>
-          )}
-        </div>
+          </div>
+        ))}
       </div>
     </div>
   );

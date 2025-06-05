@@ -41,7 +41,9 @@ const ProductPage = async ({ params }: ProductPageProps) => {
   }
 
   return (
-    <div className="pb-24">
+    <div className="container mx-auto max-w-4xl pb-28 md:pb-24">
+      {" "}
+      {/* Aumentado padding p/ mobile */}
       <ProductClient product={product} pizzas={pizzasForHalfHalf} />
     </div>
   );

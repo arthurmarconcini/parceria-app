@@ -1,27 +1,19 @@
 "use client";
 
-import { Prisma, Product as PrismaProduct } from "@prisma/client"; //
-import { useEffect, useState } from "react";
-import Image from "next/image";
+import { Prisma, Product as PrismaProduct } from "@prisma/client";
+import { useEffect, useState, useMemo } from "react";
+import { toast } from "sonner";
 
-import currencyFormat from "@/helpers/currency-format";
-import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { CartItem, useCartStore } from "@/hooks/cartStore";
 
-// Our refactored size selector
-import PizzaHalfHalf from "./PizzaHalfHalf"; // Our refactored flavor selector
-import OptionsTitle from "./OptionsTitle";
-import {
-  MessageCircleMoreIcon,
-  MinusIcon,
-  PlusIcon,
-  ShoppingCartIcon,
-} from "lucide-react"; //
-import { Textarea } from "@/components/ui/textarea";
-import { CartItem, useCartStore } from "@/hooks/cartStore"; //
-import { Separator } from "@/components/ui/separator"; //
-import { toast } from "sonner"; //
-import ProductOptions from "./SizeSelector";
+import ProductImageAndInfo from "./ProductImageAndInfo";
+import PizzaModeSelector from "./PizzaModeSelector";
+import SizeSelector from "./SizeSelector";
+import PizzaHalfHalfSelector from "./PizzaHalfHalfSelector";
 import ProductAdditionals from "./ProductAdditionals";
+import ProductObservations from "./ProductObservations";
+import ProductActionsFooter from "./ProductActionsFooter";
 
 interface ProductClientProps {
   product: Prisma.ProductGetPayload<{
@@ -32,7 +24,6 @@ interface ProductClientProps {
     };
   }>;
   pizzas: Prisma.ProductGetPayload<{
-    // Renamed for clarity
     include: {
       Size: true;
     };
@@ -40,321 +31,280 @@ interface ProductClientProps {
 }
 
 export const ProductClient = ({
-  product,
-  pizzas: allPizzasForHalfHalf,
+  product: produtoDaPagina,
+  pizzas: todasAsPizzasParaSelecao,
 }: ProductClientProps) => {
-  //
-  const { addToCart } = useCartStore(); //
+  const { addToCart } = useCartStore();
 
   const [quantity, setQuantity] = useState(1);
   const [observations, setObservations] = useState("");
 
-  // Default selectedSize: if sizes exist, pick the first one (or smallest by price later), else undefined.
-  const [selectedSize, setSelectedSize] = useState<string | undefined>(
-    product.Size && product.Size.length > 0
-      ? product.Size.sort((a, b) => a.price - b.price)[0].id
-      : undefined
+  const firstHalfPizzaId = produtoDaPagina.id;
+
+  const [selectedSizeId, setSelectedSizeId] = useState<string | undefined>(
+    () => {
+      if (produtoDaPagina.Size && produtoDaPagina.Size.length > 0) {
+        return [...produtoDaPagina.Size].sort((a, b) => a.price - b.price)[0]
+          .id;
+      }
+      return undefined;
+    }
   );
 
-  // Pizza specific states
+  const isPizzaCategory = useMemo(
+    () => produtoDaPagina.category.name.toLowerCase() === "pizzas",
+    [produtoDaPagina.category.name]
+  );
+
   const [isHalfHalfMode, setIsHalfHalfMode] = useState(
-    product.isHalfHalf && product.category.name.toLowerCase() === "pizzas"
-  ); // Default to true only for pizzas marked as halfHalf
-  const [firstHalfPizzaId, setFirstHalfPizzaId] = useState<string>(product.id); // Default first half to the current product
+    isPizzaCategory && produtoDaPagina.isHalfHalf === true
+  );
+
   const [secondHalfPizzaId, setSecondHalfPizzaId] = useState<string | null>(
     null
   );
 
   const [extrasQuantities, setExtrasQuantities] = useState<{
     [key: string]: number;
-  }>(product.Extras.reduce((acc, extra) => ({ ...acc, [extra.id]: 0 }), {}));
+  }>(() =>
+    produtoDaPagina.Extras.reduce(
+      (acc, extra) => ({ ...acc, [extra.id]: 0 }),
+      {}
+    )
+  );
 
-  const isPizzaCategory = product.category.name.toLowerCase() === "pizzas";
-
-  // Effect to reset half-half mode if product category is not pizza
   useEffect(() => {
     if (!isPizzaCategory) {
       setIsHalfHalfMode(false);
+    } else {
+      setIsHalfHalfMode(produtoDaPagina.isHalfHalf === true);
     }
-  }, [isPizzaCategory]);
+  }, [isPizzaCategory, produtoDaPagina.isHalfHalf]);
 
-  // Effect to set default size if not already set and sizes are available
   useEffect(() => {
-    if (!selectedSize && product.Size && product.Size.length > 0) {
-      const sortedSizes = [...product.Size].sort((a, b) => a.price - b.price);
-      setSelectedSize(sortedSizes[0].id);
+    if (
+      !selectedSizeId &&
+      produtoDaPagina.Size &&
+      produtoDaPagina.Size.length > 0
+    ) {
+      const sortedSizes = [...produtoDaPagina.Size].sort(
+        (a, b) => a.price - b.price
+      );
+      setSelectedSizeId(sortedSizes[0].id);
     }
-  }, [product.Size, selectedSize]);
+  }, [produtoDaPagina.Size, selectedSizeId]);
 
-  const handleAddToCart = () => {
-    let priceAtTime = 0;
-    let cartItemName = product.name;
-    let finalSelectedSizeId = selectedSize;
-    let halfhalfPayload: CartItem["halfhalf"] = undefined; //
+  const selectedSizeObject = useMemo(() => {
+    return produtoDaPagina.Size.find((s) => s.id === selectedSizeId);
+  }, [produtoDaPagina.Size, selectedSizeId]);
 
-    const currentSelectedSizeObj = product.Size.find(
-      (s) => s.id === finalSelectedSizeId
-    );
+  const handlePizzaModeChange = (isHalfHalf: boolean) => {
+    setIsHalfHalfMode(isHalfHalf);
+    if (!isHalfHalf) {
+      setSecondHalfPizzaId(null);
+    }
+  };
+
+  const calcularPrecoBasePizza = (): number => {
+    if (!isPizzaCategory || !selectedSizeObject) return 0;
+
+    const obterPrecoSaborNoTamanhoSelecionado = (
+      pizzaId: string
+    ): number | null => {
+      const pizzaProd = todasAsPizzasParaSelecao.find((p) => p.id === pizzaId);
+      if (!pizzaProd) return null;
+      const tamanho = pizzaProd.Size.find(
+        (s) => s.name === selectedSizeObject.name
+      );
+      return tamanho?.price ?? null;
+    };
+
+    const precoPrimeiraMetade =
+      obterPrecoSaborNoTamanhoSelecionado(firstHalfPizzaId);
+    if (precoPrimeiraMetade === null) return 0;
+
+    if (isHalfHalfMode && secondHalfPizzaId) {
+      const precoSegundaMetade =
+        obterPrecoSaborNoTamanhoSelecionado(secondHalfPizzaId);
+
+      if (precoSegundaMetade === null) return precoPrimeiraMetade;
+      return Math.max(precoPrimeiraMetade, precoSegundaMetade);
+    }
+    return precoPrimeiraMetade;
+  };
+
+  const calcularPrecoTotal = (): number => {
+    let precoBase = 0;
 
     if (isPizzaCategory) {
-      if (!finalSelectedSizeId) {
-        toast.error("Por favor, selecione o tamanho da pizza.");
-        return;
-      }
-      const firstHalfProduct = allPizzasForHalfHalf.find(
-        (p) => p.id === firstHalfPizzaId
-      );
-      if (!firstHalfProduct) {
-        toast.error("Primeiro sabor da pizza não encontrado.");
-        return;
-      }
-      const firstHalfSizePrice = firstHalfProduct.Size.find(
-        (s) => s.id === finalSelectedSizeId
-      )?.price;
-      if (firstHalfSizePrice === undefined) {
-        toast.error(
-          `Tamanho ${currentSelectedSizeObj?.name} não disponível para ${firstHalfProduct.name}.`
-        );
-        return;
-      }
-      priceAtTime = firstHalfSizePrice;
-      cartItemName = firstHalfProduct.name; // Base name on the first half
-
-      if (isHalfHalfMode && secondHalfPizzaId) {
-        const secondHalfProduct = allPizzasForHalfHalf.find(
-          (p) => p.id === secondHalfPizzaId
-        );
-        if (!secondHalfProduct) {
-          toast.error("Segundo sabor da pizza não encontrado.");
-          return;
-        }
-        const secondHalfSizePrice = secondHalfProduct.Size.find(
-          (s) => s.name === currentSelectedSizeObj?.name
-        )?.price; // Match by name
-        if (secondHalfSizePrice === undefined) {
-          toast.error(
-            `Tamanho ${currentSelectedSizeObj?.name} não disponível para ${secondHalfProduct.name}.`
-          );
-          return;
-        }
-        // For half-half, the price is usually the higher of the two halves
-        priceAtTime = Math.max(priceAtTime, secondHalfSizePrice);
-        cartItemName = `1/2 ${firstHalfProduct.name}, 1/2 ${secondHalfProduct.name}`;
-        halfhalfPayload = {
-          //
-          firstHalf: firstHalfProduct as PrismaProduct, // Cast to ensure type compatibility
-          secondHalf: secondHalfProduct as PrismaProduct, //
-        };
-      } else if (isHalfHalfMode && !secondHalfPizzaId) {
-        // If half-half mode is active but no second flavor, it's effectively a whole pizza of the first flavor
-        // Price and name are already set for the first half.
-      }
+      precoBase = calcularPrecoBasePizza();
     } else {
-      // Not a pizza
-      if (product.Size && product.Size.length > 0) {
-        // Has sizes (e.g. Açaí)
-        if (!finalSelectedSizeId) {
-          toast.error("Por favor, selecione um tamanho.");
-          return;
-        }
-        priceAtTime = currentSelectedSizeObj?.price || 0;
+      if (produtoDaPagina.Size && produtoDaPagina.Size.length > 0) {
+        precoBase = selectedSizeObject?.price || 0;
       } else {
-        // No sizes (e.g. Burger, Drink)
-        priceAtTime = product.price || 0;
-        finalSelectedSizeId = undefined; // Ensure no sizeId for products without sizes
+        precoBase = produtoDaPagina.price || 0;
       }
     }
 
     if (
-      priceAtTime === 0 &&
-      !(isPizzaCategory && isHalfHalfMode && secondHalfPizzaId)
+      produtoDaPagina.discount &&
+      produtoDaPagina.discount > 0 &&
+      precoBase > 0
     ) {
-      // Allow price 0 only if it's a calculated half-half scenario where one half might be promotionally free
-      // Or if the product naturally has price 0 (unlikely for primary products)
-      // For now, let's assume if it's not a calculated half-half, price 0 is an error.
-      if (!isPizzaCategory || !isHalfHalfMode || !secondHalfPizzaId) {
-        // For simplicity, if price is 0 and it's not a complex half/half, assume error
-        // unless product.price was explicitly 0 (which is rare)
-        if (product.price !== 0) {
-          toast.error(
-            "Erro ao determinar o preço do produto. Tente novamente."
-          );
-          return;
-        }
-      }
+      precoBase *= 1 - produtoDaPagina.discount / 100;
     }
 
-    const orderExtras = Object.entries(extrasQuantities)
-      .filter(([, qty]) => qty > 0)
-      .map(([extraId, qty]) => {
-        const extra = product.Extras.find((e) => e.id === extraId);
-        return {
-          name: extra?.name || "",
-          extraId,
-          quantity: qty,
-          priceAtTime: extra?.price || 0,
-        };
-      });
-
-    const cartItem: Omit<CartItem, "cartItemId"> = {
-      name: cartItemName,
-      productId: product.id, // Use the main product ID for reference
-      quantity,
-      sizeId: finalSelectedSizeId,
-      halfhalf: halfhalfPayload, //
-      imageUrl: product.imageUrl || "", //
-      observation: observations || undefined,
-      priceAtTime,
-      orderExtras,
-    };
-
-    addToCart(cartItem);
-    toast.success(`${cartItemName} adicionado ao carrinho!`);
-
-    // Reset state after adding
-    setQuantity(1);
-    setObservations("");
-    setExtrasQuantities(
-      product.Extras.reduce((acc, extra) => ({ ...acc, [extra.id]: 0 }), {})
-    );
-    if (isPizzaCategory) {
-      setSecondHalfPizzaId(null); // Reset second half
-      // Optionally reset firstHalfPizzaId to product.id if it makes sense
-    }
-  };
-
-  const selectedSizeObj = product.Size.find((s) => s.id === selectedSize);
-  const selectedSizeNameForPizzaHalves = selectedSizeObj?.name;
-
-  const calculateTotal = () => {
-    let basePrice = 0;
-
-    if (isPizzaCategory) {
-      if (!selectedSize) return 0; // Cannot calculate without size
-
-      const firstPizzaProduct =
-        allPizzasForHalfHalf.find((p) => p.id === firstHalfPizzaId) || product;
-      const firstPizzaSize = firstPizzaProduct.Size.find(
-        (s) => s.id === selectedSize
-      );
-
-      if (!firstPizzaSize) return 0; // Size not found for first pizza
-      basePrice = firstPizzaSize.price;
-
-      if (isHalfHalfMode && secondHalfPizzaId) {
-        const secondPizzaProduct = allPizzasForHalfHalf.find(
-          (p) => p.id === secondHalfPizzaId
-        );
-        // Important: Find the *corresponding* size (by name) for the second pizza
-        const secondPizzaSize = secondPizzaProduct?.Size.find(
-          (s) => s.name === firstPizzaSize.name
-        );
-        if (secondPizzaSize) {
-          basePrice = Math.max(basePrice, secondPizzaSize.price);
-        }
-      }
-    } else {
-      // Not a pizza
-      if (product.Size && product.Size.length > 0) {
-        // Product has sizes (e.g., Açaí)
-        const currentSize = product.Size.find((s) => s.id === selectedSize);
-        basePrice = currentSize?.price || 0;
-      } else {
-        // Product has no sizes (e.g., Burger)
-        basePrice = product.price || 0;
-      }
-    }
-
-    const extrasTotal = product.Extras.reduce((acc, extra) => {
+    const totalAdicionais = produtoDaPagina.Extras.reduce((acc, extra) => {
       const qty = extrasQuantities[extra.id] || 0;
       return acc + extra.price * qty;
     }, 0);
 
-    return (basePrice + extrasTotal) * quantity;
+    return (precoBase + totalAdicionais) * quantity;
   };
 
-  const onExtraQuantityChange = (extraId: string, qty: number) => {
-    setExtrasQuantities({ ...extrasQuantities, [extraId]: qty });
+  const handleAdicionarAoCarrinho = () => {
+    let precoBaseItemCarrinho = 0;
+    let nomeItemCarrinho = produtoDaPagina.name;
+    let payloadMeioAMeio: CartItem["halfhalf"] = undefined;
+
+    if (isPizzaCategory) {
+      if (!selectedSizeId || !selectedSizeObject) {
+        toast.error("Por favor, selecione o tamanho da pizza.");
+        return;
+      }
+      precoBaseItemCarrinho = calcularPrecoBasePizza();
+
+      if (produtoDaPagina.discount && produtoDaPagina.discount > 0) {
+        precoBaseItemCarrinho *= 1 - produtoDaPagina.discount / 100;
+      }
+
+      const produtoPrimeiraMetade = produtoDaPagina;
+
+      if (isHalfHalfMode && secondHalfPizzaId) {
+        const produtoSegundaMetade = todasAsPizzasParaSelecao.find(
+          (p) => p.id === secondHalfPizzaId
+        );
+        if (!produtoSegundaMetade) {
+          toast.error("Segundo sabor da pizza não encontrado.");
+          return;
+        }
+        nomeItemCarrinho = `1/2 ${produtoPrimeiraMetade.name}, 1/2 ${produtoSegundaMetade.name}`;
+        payloadMeioAMeio = {
+          firstHalf: produtoPrimeiraMetade as PrismaProduct,
+          secondHalf: produtoSegundaMetade as PrismaProduct,
+        };
+      } else {
+        nomeItemCarrinho = produtoPrimeiraMetade.name;
+      }
+    } else {
+      if (produtoDaPagina.Size && produtoDaPagina.Size.length > 0) {
+        if (!selectedSizeId || !selectedSizeObject) {
+          toast.error("Por favor, selecione um tamanho.");
+          return;
+        }
+        precoBaseItemCarrinho = selectedSizeObject.price || 0;
+      } else {
+        precoBaseItemCarrinho = produtoDaPagina.price || 0;
+      }
+      if (produtoDaPagina.discount && produtoDaPagina.discount > 0) {
+        precoBaseItemCarrinho *= 1 - produtoDaPagina.discount / 100;
+      }
+    }
+
+    if (
+      precoBaseItemCarrinho <= 0 &&
+      produtoDaPagina.price !== 0 &&
+      !(isPizzaCategory && produtoDaPagina.price === null)
+    ) {
+      toast.error(
+        "Erro ao determinar o preço base do produto. Tente novamente."
+      );
+      return;
+    }
+
+    const extrasDoPedido = Object.entries(extrasQuantities)
+      .filter(([, qty]) => qty > 0)
+      .map(([extraId, qty]) => {
+        const extraInfo = produtoDaPagina.Extras.find((e) => e.id === extraId);
+        return {
+          name: extraInfo?.name || "Adicional desconhecido",
+          extraId,
+          quantity: qty,
+          priceAtTime: extraInfo?.price || 0,
+        };
+      });
+
+    const itemParaCarrinho: Omit<CartItem, "cartItemId"> = {
+      name: nomeItemCarrinho,
+      productId: produtoDaPagina.id,
+      quantity,
+      sizeId: selectedSizeId,
+      halfhalf: payloadMeioAMeio,
+      imageUrl: produtoDaPagina.imageUrl || "",
+      observation: observations || undefined,
+      priceAtTime: precoBaseItemCarrinho,
+      orderExtras: extrasDoPedido,
+    };
+
+    addToCart(itemParaCarrinho);
+    toast.success(`${nomeItemCarrinho} adicionado ao carrinho!`);
+
+    setQuantity(1);
+    setObservations("");
+    setExtrasQuantities(
+      produtoDaPagina.Extras.reduce(
+        (acc, extra) => ({ ...acc, [extra.id]: 0 }),
+        {}
+      )
+    );
+    if (isPizzaCategory) {
+      setSecondHalfPizzaId(null);
+    }
   };
 
-  const handleIncrementQuantity = () =>
-    setQuantity((prev) => Math.min(prev + 1, 10)); // Max 10
-  const handleDecrementQuantity = () =>
-    setQuantity((prev) => Math.max(prev - 1, 1)); // Min 1
+  const handleIncrementarQuantidade = () =>
+    setQuantity((prev) => Math.min(prev + 1, 10));
+  const handleDecrementarQuantidade = () =>
+    setQuantity((prev) => Math.max(prev - 1, 1));
+
+  const desabilitarAdicionarAoCarrinho = useMemo(() => {
+    if (isPizzaCategory && !selectedSizeId) return true;
+    if (
+      !isPizzaCategory &&
+      produtoDaPagina.Size &&
+      produtoDaPagina.Size.length > 0 &&
+      !selectedSizeId
+    ) {
+      return true;
+    }
+
+    return false;
+  }, [isPizzaCategory, selectedSizeId, produtoDaPagina.Size]);
 
   return (
     <div className="flex flex-col">
-      {/* Product Image and Basic Info */}
-      <div className="relative h-64 md:h-80 w-full">
-        <Image
-          src={
-            product.imageUrl ||
-            "https://img.freepik.com/fotos-gratis/hamburguer-enorme-com-carne-frita-e-legumes_140725-971.jpg"
-          }
-          alt={product.name}
-          fill
-          className="object-cover"
-          priority
-        />
-      </div>
-      <div className="p-4 space-y-3">
-        <h1 className="text-2xl font-bold text-foreground">{product.name}</h1>
-        {product.description && (
-          <p className="text-sm text-muted-foreground">{product.description}</p>
-        )}
-        {/* Display initial price or "From..." for non-configurable items */}
-        {!isPizzaCategory &&
-          product.price !== null &&
-          (!product.Size || product.Size.length === 0) && (
-            <p className="text-xl font-semibold text-primary">
-              {currencyFormat(
-                product.price * (1 - (product.discount || 0) / 100)
-              )}
-              {product.discount && product.discount > 0 && (
-                <span className="ml-2 text-sm line-through text-muted-foreground">
-                  {currencyFormat(product.price)}
-                </span>
-              )}
-            </p>
-          )}
-      </div>
-
+      <ProductImageAndInfo
+        product={produtoDaPagina}
+        isPizzaCategory={isPizzaCategory}
+      />
       <Separator />
-
-      {/* Configuration Sections */}
       <div className="space-y-1">
-        {isPizzaCategory && product.isHalfHalf && (
+        {isPizzaCategory && produtoDaPagina.isHalfHalf && (
           <>
-            <OptionsTitle title="Como você quer sua pizza?" />
-            <div className="flex gap-2 p-4 justify-stretch">
-              <Button
-                variant={!isHalfHalfMode ? "default" : "outline"}
-                onClick={() => {
-                  setIsHalfHalfMode(false);
-                  setSecondHalfPizzaId(null);
-                }}
-                className="flex-1"
-              >
-                Inteira
-              </Button>
-              <Button
-                variant={isHalfHalfMode ? "default" : "outline"}
-                onClick={() => setIsHalfHalfMode(true)}
-                className="flex-1"
-              >
-                Meio a Meio
-              </Button>
-            </div>
+            <PizzaModeSelector
+              isHalfHalfMode={isHalfHalfMode}
+              onSelectMode={handlePizzaModeChange}
+            />
             <Separator />
           </>
         )}
 
-        {product.Size && product.Size.length > 0 && (
+        {produtoDaPagina.Size && produtoDaPagina.Size.length > 0 && (
           <>
-            <ProductOptions
-              sizes={product.Size}
-              selectedSize={selectedSize}
-              onSizeChange={setSelectedSize}
+            <SizeSelector
+              sizes={produtoDaPagina.Size}
+              selectedSize={selectedSizeId}
+              onSizeChange={setSelectedSizeId}
               title={
                 isPizzaCategory && isHalfHalfMode
                   ? "1. Escolha o tamanho"
@@ -365,98 +315,44 @@ export const ProductClient = ({
           </>
         )}
 
-        {isPizzaCategory && isHalfHalfMode && (
+        {isPizzaCategory && isHalfHalfMode && produtoDaPagina.isHalfHalf && (
           <>
-            <PizzaHalfHalf
-              pizzas={allPizzasForHalfHalf}
-              firstHalf={firstHalfPizzaId}
-              secondHalf={secondHalfPizzaId}
-              onFirstHalfChange={setFirstHalfPizzaId}
+            <PizzaHalfHalfSelector
+              pizzas={todasAsPizzasParaSelecao}
+              productPagePizza={produtoDaPagina}
+              secondHalfPizzaId={secondHalfPizzaId}
               onSecondHalfChange={setSecondHalfPizzaId}
-              selectedSizeName={selectedSizeNameForPizzaHalves}
+              selectedSizeName={selectedSizeObject?.name}
+              disabled={!isHalfHalfMode || !selectedSizeId}
             />
             <Separator />
           </>
         )}
 
-        {product.Extras && product.Extras.length > 0 && (
+        {produtoDaPagina.Extras && produtoDaPagina.Extras.length > 0 && (
           <>
             <ProductAdditionals
-              product={product}
+              product={produtoDaPagina}
               extrasQuantities={extrasQuantities}
-              onExtraQuantityChange={onExtraQuantityChange}
+              onExtraQuantityChange={(extraId, qty) =>
+                setExtrasQuantities((prev) => ({ ...prev, [extraId]: qty }))
+              }
             />
             <Separator />
           </>
         )}
 
-        <div className="p-4 space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2 items-center">
-              <MessageCircleMoreIcon
-                size={18}
-                className="text-muted-foreground"
-              />
-              <p className="text-sm font-medium text-foreground">
-                Alguma observação?
-              </p>
-            </div>
-            <span className="text-xs text-muted-foreground">{`${observations.length} / 140`}</span>
-          </div>
-          <Textarea
-            placeholder="Ex: tirar a cebola, maionese à parte etc..."
-            value={observations}
-            onChange={(e) => {
-              if (e.target.value.length <= 140) {
-                setObservations(e.target.value);
-              }
-            }}
-            className="text-sm min-h-[80px]"
-          />
-        </div>
+        <ProductObservations value={observations} onChange={setObservations} />
       </div>
-
-      {/* Fixed Footer for Actions */}
-      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-lg p-3 md:p-4 z-50">
-        <div className="container mx-auto flex items-center gap-3 md:gap-4">
-          <div className="flex items-center gap-1 p-1 border rounded-md">
-            <Button
-              onClick={handleDecrementQuantity}
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10"
-            >
-              <MinusIcon size={16} strokeWidth={2.5} />
-            </Button>
-            <span className="w-6 text-center text-sm md:text-base font-medium">
-              {quantity}
-            </span>
-            <Button
-              onClick={handleIncrementQuantity}
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10"
-            >
-              <PlusIcon size={16} strokeWidth={2.5} />
-            </Button>
-          </div>
-          <Button
-            onClick={handleAddToCart}
-            className="flex-1 h-10 md:h-12 text-sm md:text-base"
-            disabled={Boolean(
-              isPizzaCategory &&
-                (!selectedSize ||
-                  (isHalfHalfMode &&
-                    !secondHalfPizzaId &&
-                    product.id === firstHalfPizzaId &&
-                    allPizzasForHalfHalf.length > 1))
-            )}
-          >
-            <ShoppingCartIcon size={18} className="mr-2" />
-            Adicionar ({currencyFormat(calculateTotal())})
-          </Button>
-        </div>
-      </div>
+      <ProductActionsFooter
+        quantity={quantity}
+        onDecrementQuantity={handleDecrementarQuantidade}
+        onIncrementQuantity={handleIncrementarQuantidade}
+        totalPrice={calcularPrecoTotal()}
+        onAddToCart={handleAdicionarAoCarrinho}
+        disabledAddToCart={desabilitarAdicionarAoCarrinho}
+      />
+      <div className="pb-24 md:pb-28" />
     </div>
   );
 };
