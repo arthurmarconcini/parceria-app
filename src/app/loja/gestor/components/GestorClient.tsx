@@ -1,14 +1,15 @@
 "use client";
 
 import { Prisma, Status } from "@prisma/client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 import OrderListPanel from "./OrderListPanel";
 import OrderDetailPanel from "./OrderDetailPanel";
 import { UpdateResult } from "../actions/statusButtons";
+import { toast } from "sonner";
+import Pusher from "pusher-js";
 
-// Tipo para o pedido detalhado, usado em todo o componente
 export type DetailedOrder = Prisma.OrderGetPayload<{
   include: {
     items: {
@@ -35,17 +36,64 @@ const GestorClient = () => {
 
   const isMobile = useIsMobile();
 
-  // Efeito para buscar os pedidos da API
+  const hasInteracted = useRef(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const unlockAudio = () => {
+        if (!hasInteracted.current) {
+          const audio = new Audio();
+          audio.play().catch(() => {});
+          audio.pause();
+          hasInteracted.current = true;
+
+          window.removeEventListener("click", unlockAudio);
+          window.removeEventListener("keydown", unlockAudio);
+        }
+      };
+
+      window.addEventListener("click", unlockAudio);
+      window.addEventListener("keydown", unlockAudio);
+      const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+      });
+
+      const channel = pusher.subscribe("pedidos");
+
+      channel.bind("novo-pedido", (novoPedido: DetailedOrder) => {
+        const audio = new Audio("/novo_pedido.mp3");
+        audio.play();
+
+        toast.success(`Novo Pedido! #${novoPedido.orderNumber.split("-")[3]}`, {
+          description: `${novoPedido.user.name} fez um pedido.`,
+          style: {
+            border: "1px solid #000",
+            backgroundColor: "#fff",
+          },
+        });
+
+        setPedidos((pedidosAtuais) => [novoPedido, ...pedidosAtuais]);
+      });
+
+      return () => {
+        window.removeEventListener("click", unlockAudio);
+        window.removeEventListener("keydown", unlockAudio);
+
+        pusher.unsubscribe("pedidos");
+        pusher.disconnect();
+      };
+    }
+  }, []);
+
   useEffect(() => {
     const fetchPedidos = async () => {
       setLoading(true);
       try {
-        const response = await fetch("/api/orders"); // API já filtra por dia
+        const response = await fetch("/api/orders");
         const data: DetailedOrder[] = await response.json();
         setPedidos(data);
       } catch (error) {
         console.error("Erro ao buscar pedidos:", error);
-        // Considerar adicionar um toast de erro para o usuário
       } finally {
         setLoading(false);
       }
@@ -53,7 +101,6 @@ const GestorClient = () => {
     fetchPedidos();
   }, []);
 
-  // Callback para atualizar o estado local após uma mudança de status
   const handleStatusUpdate = (result: UpdateResult) => {
     if (result.success) {
       if (result.updatedOrder) {
@@ -65,14 +112,14 @@ const GestorClient = () => {
                   ...p,
                   status: updatedOrder.status,
                   updatedAt: updatedOrder.updatedAt,
-                } // Atualiza apenas campos diretos do pedido
+                }
               : p
           )
         );
         if (selectedPedido && selectedPedido.id === updatedOrder.id) {
           setSelectedPedido((prevSelected) => {
             if (!prevSelected) return null;
-            // Mantém as relações (items, user, address) e atualiza o status e updatedAt
+
             return {
               ...prevSelected,
               status: updatedOrder.status,
@@ -80,23 +127,19 @@ const GestorClient = () => {
             };
           });
         }
-        // Ex: toast.success("Status do pedido atualizado!");
       } else if (result.deletedOrderId) {
         setPedidos((prevPedidos) =>
           prevPedidos.filter((p) => p.id !== result.deletedOrderId)
         );
         if (selectedPedido && selectedPedido.id === result.deletedOrderId) {
-          setSelectedPedido(null); // Limpa o pedido selecionado se ele foi excluído
+          setSelectedPedido(null);
         }
-        // Ex: toast.success("Pedido excluído com sucesso!");
       }
     } else {
       console.error("Falha ao atualizar status:", result.error);
-      // Ex: toast.error(`Falha ao atualizar: ${result.error}`);
     }
   };
 
-  // Filtra os pedidos com base no termo de busca e no filtro de status
   const filteredPedidos = pedidos.filter((pedido) => {
     const searchTermLower = searchTerm.toLowerCase();
     const matchesSearch =
@@ -115,7 +158,6 @@ const GestorClient = () => {
     return matchesSearch && matchesStatus;
   });
 
-  // Mapeamentos para exibição de status
   const statusDisplay: Record<Status, string> = {
     PENDING: "Pendente",
     IN_PREPARATION: "Em Preparo",
@@ -132,7 +174,6 @@ const GestorClient = () => {
     CANCELED: { ribbon: "bg-muted", tag: "bg-muted text-muted-foreground" },
   };
 
-  // Define a altura do container principal para ocupar o espaço disponível
   const mainContainerHeight = isMobile
     ? "min-h-[calc(100dvh-var(--shop-header-height,4rem))]"
     : "h-[calc(100dvh-var(--shop-header-height,4rem)-2rem)]";

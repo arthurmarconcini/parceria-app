@@ -1,6 +1,15 @@
 import { db } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { OrderExtra, PaymentMethod } from "@prisma/client";
+import { OrderExtra, OrderItem, PaymentMethod, Prisma } from "@prisma/client";
+import Pusher from "pusher";
+
+const pusher = new Pusher({
+  appId: process.env.PUSHER_APP_ID!,
+  key: process.env.PUSHER_KEY!,
+  secret: process.env.PUSHER_SECRET!,
+  cluster: process.env.PUSHER_CLUSTER!,
+  useTLS: true,
+});
 
 export async function POST(req: NextRequest) {
   const {
@@ -73,50 +82,102 @@ export async function POST(req: NextRequest) {
   const orderNumber = `${today}-${nextOrderNumber}`; // Ex.: 2025-05-07-001
 
   try {
+    // 3. Modifique a criação do pedido para incluir todos os dados necessários no retorno
     const order = await db.order.create({
       data: {
         userId,
         addressId,
         total,
-        orderNumber: orderNumber, // Garante que orderNumber seja uma string
-        paymentMethod: paymentMethod as PaymentMethod, // Garante que o tipo seja correto
+        orderNumber,
+        paymentMethod: paymentMethod as PaymentMethod,
         requiresChange: paymentMethod === "CASH" ? requiresChange : null,
         changeFor:
           paymentMethod === "CASH" && requiresChange ? changeFor : null,
         items: {
-          createMany: {
-            data: items.map((item) => ({
-              productId: item.productId,
-              quantity: item.quantity,
-              priceAtTime: item.priceAtTime,
-              observation: item.observation || null, // Garante que observation seja string ou null
-            })),
-          },
+          create: items.map((item: OrderItem) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            priceAtTime: item.priceAtTime,
+            observation: item.observation || null,
+            sizeId: item.sizeId || null,
+            // Importante: Tratamento de HalfHalf e Extras precisa ser feito após a criação do OrderItem
+          })),
         },
       },
+      // 4. Garanta que o `include` traga todos os dados que a sua UI precisa
       include: {
-        items: true,
+        items: {
+          include: {
+            product: true,
+            Size: true,
+            orderExtras: { include: { extra: true } },
+            HalfHalf: { include: { firstHalf: true, secondHalf: true } },
+          },
+        },
+        user: true,
+        address: { include: { locality: true } },
       },
     });
 
-    const orderExtrasPromises = items.flatMap((item, index) => {
-      const orderItemId = order.items[index].id; // Pega o ID do OrderItem recém-criado
-      return item.orderExtras.map((extra: OrderExtra) =>
-        db.orderExtra.create({
-          data: {
-            orderItemId,
-            extraId: extra.extraId,
-            quantity: extra.quantity,
-            priceAtTime: extra.priceAtTime,
+    // Lógica para criar HalfHalf e OrderExtras, se houver
+    const itemPromises = items.map(
+      async (
+        item: Prisma.OrderItemGetPayload<{
+          include: {
+            HalfHalf: { include: { firstHalf: true; secondHalf: true } };
+            orderExtras: { include: { extra: true } };
+          };
+        }>,
+        index: number
+      ) => {
+        const createdOrderItem = order.items[index];
+
+        if (item.HalfHalf) {
+          await db.halfHalf.create({
+            data: {
+              orderItemId: createdOrderItem.id,
+              firstHalfId: item.HalfHalf.firstHalf.id,
+              secondHalfId: item.HalfHalf.secondHalf.id,
+            },
+          });
+        }
+
+        if (item.orderExtras && item.orderExtras.length > 0) {
+          await db.orderExtra.createMany({
+            data: item.orderExtras.map((extra: OrderExtra) => ({
+              orderItemId: createdOrderItem.id,
+              extraId: extra.extraId,
+              quantity: extra.quantity,
+              priceAtTime: extra.priceAtTime,
+            })),
+          });
+        }
+      }
+    );
+
+    await Promise.all(itemPromises);
+
+    // Recarrega o pedido completo com todas as relações após criar HalfHalf e Extras
+    const completeOrder = await db.order.findUnique({
+      where: { id: order.id },
+      include: {
+        items: {
+          include: {
+            product: true,
+            Size: true,
+            orderExtras: { include: { extra: true } },
+            HalfHalf: { include: { firstHalf: true, secondHalf: true } },
           },
-        })
-      );
+        },
+        user: true,
+        address: { include: { locality: true } },
+      },
     });
 
-    // Executa todas as criações de OrderExtra
-    await Promise.all(orderExtrasPromises);
+    // 5. Dispare o evento para o Pusher após o sucesso da criação
+    await pusher.trigger("pedidos", "novo-pedido", completeOrder);
 
-    return NextResponse.json(order, { status: 201 });
+    return NextResponse.json(completeOrder, { status: 201 }); // Retorna o pedido completo
   } catch (error) {
     console.error("Erro ao criar pedido:", error);
     return NextResponse.json(
@@ -138,7 +199,7 @@ export async function GET() {
       where: {
         createdAt: {
           gte: today, // Maior ou igual ao início de hoje
-          lt: tomorrow,  // Menor que o início de amanhã
+          lt: tomorrow, // Menor que o início de amanhã
         },
       },
       include: {
@@ -154,8 +215,8 @@ export async function GET() {
         },
       },
       orderBy: {
-        createdAt: 'asc',
-      }
+        createdAt: "asc",
+      },
     });
 
     return NextResponse.json(orders, { status: 200 });
