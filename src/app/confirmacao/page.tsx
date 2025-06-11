@@ -50,7 +50,7 @@ export default async function OrderConfirmationPage({
       <CheckCircle2 size={64} className="text-green-600 mb-4" />
       <h1 className="text-3xl font-bold text-foreground">Pedido Confirmado!</h1>
       <p className="text-muted-foreground mt-2 text-lg">
-        Obrigado, {order.user.name}! Seu pedido foi recebido com sucesso.
+        Obrigado, {order.user!.name}! Seu pedido foi recebido com sucesso.
       </p>
 
       <Card className="mt-8 w-full max-w-lg text-left">

@@ -14,20 +14,16 @@ import { ScrollArea, ScrollBar } from "../ui/scroll-area";
 import currencyFormat from "@/helpers/currency-format";
 import { ShoppingCartIcon, Trash2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 
 const Cart = () => {
   const { cart, clearCart, isCartOpen, toggleCart, getTotalPrice } =
     useCartStore();
-  const { status } = useSession();
+
   const router = useRouter();
 
   function handleCheckout() {
     toggleCart();
-    if (status !== "authenticated") {
-      router.push("/login");
-      return;
-    }
+
     router.push("/checkout");
   }
 

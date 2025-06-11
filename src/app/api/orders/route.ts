@@ -14,7 +14,9 @@ const pusher = new Pusher({
 export async function POST(req: NextRequest) {
   const {
     userId,
-    addressId,
+    guestName,
+    guestPhone,
+    address,
     total,
     paymentMethod,
     requiresChange,
@@ -22,12 +24,21 @@ export async function POST(req: NextRequest) {
     items,
   } = await req.json();
 
-  // Validação dos campos obrigatórios
-  if (!userId || !addressId || !total || !paymentMethod) {
+  if (!userId && (!guestName || !guestPhone)) {
     return NextResponse.json(
       {
         error:
-          "Campos obrigatórios ausentes: userId, addressId, total ou paymentMethod.",
+          "Identificação do usuário ou dados do convidado são necessários.",
+      },
+      { status: 400 }
+    );
+  }
+
+  // Validação dos campos obrigatórios
+  if (!address || !total || !paymentMethod) {
+    return NextResponse.json(
+      {
+        error: "Campos obrigatórios ausentes: address, total ou paymentMethod.",
       },
       { status: 400 }
     );
@@ -82,13 +93,26 @@ export async function POST(req: NextRequest) {
   const orderNumber = `${today}-${nextOrderNumber}`; // Ex.: 2025-05-07-001
 
   try {
-    // 3. Modifique a criação do pedido para incluir todos os dados necessários no retorno
+    const createdAddress = await db.address.create({
+      data: {
+        street: address.street,
+        number: address.number,
+        city: address.city,
+        state: address.state,
+        localityId: address.localityId,
+        userId: userId || null,
+      },
+    });
+
     const order = await db.order.create({
       data: {
-        userId,
-        addressId,
+        ...(userId
+          ? { userId: userId }
+          : { guestName: guestName, guestPhone: guestPhone }),
+        addressId: createdAddress.id,
         total,
         orderNumber,
+        isGuestOrder: !userId,
         paymentMethod: paymentMethod as PaymentMethod,
         requiresChange: paymentMethod === "CASH" ? requiresChange : null,
         changeFor:
@@ -100,11 +124,10 @@ export async function POST(req: NextRequest) {
             priceAtTime: item.priceAtTime,
             observation: item.observation || null,
             sizeId: item.sizeId || null,
-            // Importante: Tratamento de HalfHalf e Extras precisa ser feito após a criação do OrderItem
           })),
         },
       },
-      // 4. Garanta que o `include` traga todos os dados que a sua UI precisa
+
       include: {
         items: {
           include: {
@@ -119,7 +142,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Lógica para criar HalfHalf e OrderExtras, se houver
+    // Lógica para criar HalfHalf e OrderExtras
     const itemPromises = items.map(
       async (
         item: Prisma.OrderItemGetPayload<{
@@ -157,7 +180,6 @@ export async function POST(req: NextRequest) {
 
     await Promise.all(itemPromises);
 
-    // Recarrega o pedido completo com todas as relações após criar HalfHalf e Extras
     const completeOrder = await db.order.findUnique({
       where: { id: order.id },
       include: {
@@ -174,7 +196,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 5. Dispare o evento para o Pusher após o sucesso da criação
     await pusher.trigger("pedidos", "novo-pedido", completeOrder);
 
     return NextResponse.json(completeOrder, { status: 201 }); // Retorna o pedido completo
