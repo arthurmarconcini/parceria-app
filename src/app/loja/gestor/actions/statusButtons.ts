@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/prisma";
-import { Order, Status } from "@prisma/client"; // Importe o tipo Order
+import { Order, Status } from "@prisma/client";
 import Pusher from "pusher";
 
 const pusher = new Pusher({
@@ -12,11 +12,10 @@ const pusher = new Pusher({
   useTLS: true,
 });
 
-// Define uma interface para o resultado das ações
 export interface UpdateResult {
   success: boolean;
-  updatedOrder?: Order; // Retorna o pedido completo após a atualização
-  deletedOrderId?: string; // Para a ação de exclusão
+  updatedOrder?: Order;
+  deletedOrderId?: string;
   error?: string;
 }
 
@@ -29,11 +28,11 @@ const STATUS_ORDER_SEQUENCE: Status[] = [
 
 const getNextStatus = (currentStatus: Status): Status | null => {
   if (currentStatus === "CANCELED" || currentStatus === "DELIVERED") {
-    return null; // Estados terminais não têm "próximo" status via aceitação
+    return null;
   }
   const currentIndex = STATUS_ORDER_SEQUENCE.indexOf(currentStatus);
   if (currentIndex === -1 || currentIndex >= STATUS_ORDER_SEQUENCE.length - 1) {
-    return null; // Não há próximo status na sequência principal (DELIVERED é o último)
+    return null;
   }
   return STATUS_ORDER_SEQUENCE[currentIndex + 1];
 };
@@ -86,7 +85,6 @@ export const AcceptOrder = async (
 };
 
 export const RejectOrder = async (orderId: string): Promise<UpdateResult> => {
-  // Marca como Cancelado
   try {
     const updatedOrder = await db.order.update({
       where: { id: orderId },
@@ -100,7 +98,6 @@ export const RejectOrder = async (orderId: string): Promise<UpdateResult> => {
 };
 
 export const ResumeOrder = async (orderId: string): Promise<UpdateResult> => {
-  // Volta para Pendente
   try {
     const updatedOrder = await db.order.update({
       where: { id: orderId },
@@ -116,11 +113,7 @@ export const ResumeOrder = async (orderId: string): Promise<UpdateResult> => {
 export const DeleteOrderPermanently = async (
   orderId: string
 ): Promise<UpdateResult> => {
-  // Exclui de fato
   try {
-    // Primeiro, é preciso excluir os OrderItems e OrderExtras dependentes, ou configurar cascade delete no schema
-    // Para simplificar aqui, assumimos que o cascade delete está configurado ou que não há dependências que impeçam a exclusão direta.
-    // Em um cenário real, você precisaria tratar essas dependências.
     await db.order.delete({
       where: { id: orderId },
     });
@@ -134,8 +127,4 @@ export const DeleteOrderPermanently = async (
   }
 };
 
-// Renomeando CancelOrder para DeleteOrderPermanently para clareza,
-// e RejectOrder é o que efetivamente "Cancela" o pedido (muda status para CANCELED).
-// Se você tinha uma ação chamada CancelOrder que fazia a exclusão, pode usar DeleteOrderPermanently.
-// Mantendo a exportação antiga se ela for usada em outros lugares, mas recomendando a nova.
 export { DeleteOrderPermanently as CancelOrder };

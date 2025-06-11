@@ -76,7 +76,7 @@ export default function CheckoutClient({
         throw new Error(errorData.error || "Erro ao excluir endereço.");
       }
 
-      router.refresh(); // Atualiza a página após a exclusão
+      router.refresh();
     } catch (error) {
       console.error("Erro ao excluir endereço:", error);
       alert("Erro ao excluir endereço. Tente novamente.");
@@ -137,13 +137,15 @@ export default function CheckoutClient({
         body: JSON.stringify(orderData),
       });
 
+      const createdOrder = await response.json();
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Erro ao criar pedido.");
       }
 
       clearCart();
-      router.push("/order-confirmation");
+      router.push(`/confirmacao?orderId=${createdOrder.id}`);
     } catch (error) {
       console.error("Erro ao finalizar pedido:", error);
       alert("Erro ao finalizar pedido. Tente novamente.");
