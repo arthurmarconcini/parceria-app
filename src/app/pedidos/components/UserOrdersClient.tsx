@@ -1,12 +1,11 @@
-// src/app/pedidos/_components/UserOrdersClient.tsx
-
 "use client";
 
 import { Prisma } from "@prisma/client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import OrderCard from "./OrderCard";
 import { FiltersState, OrderFilters } from "./OrdersFilters";
 import OrderDetailDialog from "./OrderDetailDialog";
+import Pusher from "pusher-js";
 
 export type DetailedOrder = Prisma.OrderGetPayload<{
   include: {
@@ -27,6 +26,7 @@ interface UserOrdersClientProps {
 }
 
 export const UserOrdersClient = ({ orders }: UserOrdersClientProps) => {
+  const [realTimeOrders, setRealTimeOrders] = useState<DetailedOrder[]>(orders);
   const [selectedOrder, setSelectedOrder] = useState<DetailedOrder | null>(
     null
   );
@@ -36,7 +36,7 @@ export const UserOrdersClient = ({ orders }: UserOrdersClientProps) => {
   });
 
   const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
+    return realTimeOrders.filter((order) => {
       // Filtro de busca por nome do produto
       const searchMatch =
         filters.search.trim() === "" ||
@@ -52,7 +52,7 @@ export const UserOrdersClient = ({ orders }: UserOrdersClientProps) => {
 
       return searchMatch && dateMatch;
     });
-  }, [orders, filters]);
+  }, [realTimeOrders, filters]);
 
   const handleOpenDetails = (order: DetailedOrder) => {
     setSelectedOrder(order);
@@ -61,6 +61,27 @@ export const UserOrdersClient = ({ orders }: UserOrdersClientProps) => {
   const handleCloseDetails = () => {
     setSelectedOrder(null);
   };
+
+  useEffect(() => {
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+    });
+
+    const channel = pusher.subscribe("pedidos");
+
+    channel.bind("status-atualizado", (updatedOrder: DetailedOrder) => {
+      setRealTimeOrders((prevOrders) =>
+        prevOrders.map((order) =>
+          order.id === updatedOrder.id ? updatedOrder : order
+        )
+      );
+    });
+
+    return () => {
+      channel.unbind_all();
+      pusher.unsubscribe("pedidos");
+    };
+  }, []);
 
   return (
     <>

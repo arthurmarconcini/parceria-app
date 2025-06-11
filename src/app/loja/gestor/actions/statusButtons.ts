@@ -2,6 +2,15 @@
 
 import { db } from "@/lib/prisma";
 import { Order, Status } from "@prisma/client"; // Importe o tipo Order
+import Pusher from "pusher";
+
+const pusher = new Pusher({
+  appId: process.env.PUSHER_APP_ID!,
+  key: process.env.PUSHER_KEY!,
+  secret: process.env.PUSHER_SECRET!,
+  cluster: process.env.PUSHER_CLUSTER!,
+  useTLS: true,
+});
 
 // Define uma interface para o resultado das ações
 export interface UpdateResult {
@@ -47,7 +56,25 @@ export const AcceptOrder = async (
     const updatedOrder = await db.order.update({
       where: { id: orderId },
       data: { status: nextStatus },
+      include: {
+        user: true,
+        address: { include: { locality: true } },
+        items: {
+          include: {
+            product: true,
+            Size: true,
+            orderExtras: {
+              include: {
+                extra: true,
+              },
+            },
+            HalfHalf: { include: { firstHalf: true, secondHalf: true } },
+          },
+        },
+      },
     });
+    await pusher.trigger("pedidos", "status-atualizado", updatedOrder);
+
     return { success: true, updatedOrder };
   } catch (error) {
     console.error("Erro ao aceitar/avançar o status do pedido:", error);
