@@ -33,6 +33,10 @@ const OrderListItem: React.FC<OrderListItemProps> = ({
   statusDisplay,
   statusVisuals,
 }) => {
+  const displayName = pedido.isGuestOrder
+    ? pedido.guestName
+    : pedido.user?.name;
+
   return (
     <div
       className={`bg-background border border-border p-3 rounded-lg relative cursor-pointer hover:border-primary transition-all duration-150 ease-in-out ${
@@ -50,7 +54,8 @@ const OrderListItem: React.FC<OrderListItemProps> = ({
       <div className="ml-3">
         <div className="flex justify-between items-center">
           <h2 className="text-sm md:text-base font-semibold text-foreground truncate pr-2">
-            #{pedido.orderNumber.split("-")[3]} - {pedido.user.name}
+            #{pedido.orderNumber.split("-")[3]} -{" "}
+            {displayName || "Cliente não identificado"}
           </h2>
           <span
             className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${

@@ -240,7 +240,7 @@ export default function CheckoutClient({
       })),
       ...(isGuest
         ? { guestName, guestPhone, address: finalAddressPayload }
-        : { userId: user?.id, address: selectedAddressId }),
+        : { userId: user?.id, addressId: selectedAddressId }),
     };
 
     try {

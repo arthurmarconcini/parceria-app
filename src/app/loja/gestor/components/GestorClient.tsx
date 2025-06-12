@@ -64,12 +64,11 @@ const GestorClient = () => {
         const audio = new Audio("/novo_pedido.mp3");
         audio.play();
 
+        const displayName = novoPedido.isGuestOrder
+          ? novoPedido.guestName
+          : novoPedido.user?.name;
         toast.success(`Novo Pedido! #${novoPedido.orderNumber.split("-")[3]}`, {
-          description: `${novoPedido.user.name} fez um pedido.`,
-          style: {
-            border: "1px solid #000",
-            backgroundColor: "#fff",
-          },
+          description: `${displayName || "Um convidado"} fez um pedido.`,
         });
 
         setPedidos((pedidosAtuais) => [novoPedido, ...pedidosAtuais]);
@@ -142,8 +141,11 @@ const GestorClient = () => {
 
   const filteredPedidos = pedidos.filter((pedido) => {
     const searchTermLower = searchTerm.toLowerCase();
+    const customerName =
+      (pedido.isGuestOrder ? pedido.guestName : pedido.user?.name) || "";
+
     const matchesSearch =
-      pedido.user.name.toLowerCase().includes(searchTermLower) ||
+      customerName.toLowerCase().includes(searchTermLower) ||
       pedido.orderNumber.split("-")[3].includes(searchTermLower) ||
       new Intl.DateTimeFormat("pt-br", {
         hour: "2-digit",

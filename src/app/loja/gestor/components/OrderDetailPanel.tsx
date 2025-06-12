@@ -58,6 +58,13 @@ const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
     );
   }
 
+  const displayName = pedido.isGuestOrder
+    ? pedido.guestName
+    : pedido.user?.name;
+  const displayPhone = pedido.isGuestOrder
+    ? pedido.guestPhone
+    : pedido.user?.phone;
+
   return (
     <div
       className={`flex-1 bg-card text-card-foreground md:rounded-lg shadow-lg ${
@@ -141,11 +148,11 @@ const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
             <OrderDetailSection title="Cliente e Entrega">
               <p>
                 <strong className="text-foreground">Nome:</strong>{" "}
-                {pedido.user.name}
+                {displayName || "Cliente não identificado"}
               </p>
               <p>
-                <strong className="text-foreground">Telefone:</strong> (Não
-                disponível)
+                <strong className="text-foreground">Telefone:</strong>
+                {displayPhone || "(Não disponível)"}
               </p>
               {pedido.isDelivery && pedido.address ? (
                 <>
