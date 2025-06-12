@@ -37,7 +37,7 @@ type LocalityWithCity = Prisma.LocalityGetPayload<{
 }> & { state: string };
 
 type CheckoutClientProps = {
-  addresses: (Address & { locality: Locality | null })[]; // Garante que a localidade venha
+  addresses: (Address & { locality: Locality | null })[];
   user: UserPayload | null | undefined;
 };
 
@@ -50,7 +50,6 @@ type GuestAddressState = {
   zipCode: string;
 };
 
-// Componente Principal
 export default function CheckoutClient({
   addresses: initialAddresses,
   user,
@@ -58,14 +57,13 @@ export default function CheckoutClient({
   const router = useRouter();
   const { cart, getTotalPrice, clearCart } = useCartStore();
 
-  // --- Estados do Componente ---
   const [isGuest] = useState(!user);
   const [addresses, setAddresses] = useState(initialAddresses);
   const [localities, setLocalities] = useState<LocalityWithCity[]>([]);
+  const [isLoadingLocalities, setIsLoadingLocalities] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Estados do formulário
   const [guestName, setGuestName] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
@@ -83,7 +81,6 @@ export default function CheckoutClient({
   const [requiresChange, setRequiresChange] = useState(false);
   const [changeFor, setChangeFor] = useState<number | null>(null);
 
-  // Estados para o modal de deleção
   const [isConfirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [addressToDeleteId, setAddressToDeleteId] = useState<string | null>(
     null
@@ -100,23 +97,31 @@ export default function CheckoutClient({
   const deliveryFee = selectedLocality?.deliveryFee ?? 0;
   const finalTotal = totalPrice + deliveryFee;
 
-  // --- Efeitos ---
   useEffect(() => {
     const fetchLocalities = async () => {
+      setIsLoadingLocalities(true);
       try {
         const response = await fetch("/api/localities");
-        if (!response.ok) throw new Error("Falha ao buscar localidades");
+        if (!response.ok) {
+          throw new Error(
+            `Falha ao buscar localidades: ${response.statusText}`
+          );
+        }
         const data: LocalityWithCity[] = await response.json();
+
+        console.log("Localidades recebidas da API:", data);
+
         setLocalities(data);
       } catch (e) {
         console.error(e);
         toast.error("Não foi possível carregar as áreas de entrega.");
+      } finally {
+        setIsLoadingLocalities(false);
       }
     };
     fetchLocalities();
   }, []);
 
-  // --- Handlers de Eventos ---
   const handleAddressChange = (value: string) => setSelectedAddressId(value);
 
   const handleGuestAddressChange = (
@@ -164,7 +169,6 @@ export default function CheckoutClient({
     setIsSubmitting(true);
     setError(null);
 
-    // Validações...
     if (cart.length === 0) {
       setError("Seu carrinho está vazio.");
       setIsSubmitting(false);
@@ -219,7 +223,6 @@ export default function CheckoutClient({
       return;
     }
 
-    // Construção do Payload
     const orderData = {
       total: totalPrice,
       deliveryFee,
@@ -270,7 +273,6 @@ export default function CheckoutClient({
       onSubmit={handleSubmit}
       className="grid grid-cols-1 lg:grid-cols-3 gap-8"
     >
-      {/* Coluna de Formulários */}
       <div className="lg:col-span-2 space-y-6">
         {isGuest && (
           <Card>
@@ -338,27 +340,33 @@ export default function CheckoutClient({
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="locality">Bairro</Label>
-                  <div className="space-y-1">
-                    <Select
-                      name="localityId"
-                      value={guestAddress.localityId}
-                      onValueChange={(value) =>
-                        handleGuestAddressChange("localityId", value)
-                      }
-                      required
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o bairro" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {localities.map((loc) => (
-                          <SelectItem key={loc.id} value={loc.id}>
-                            {loc.name} (+{currencyFormat(loc.deliveryFee)})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+
+                  <Select
+                    name="localityId"
+                    value={guestAddress.localityId}
+                    onValueChange={(value) =>
+                      handleGuestAddressChange("localityId", value)
+                    }
+                    required
+                    disabled={isLoadingLocalities}
+                  >
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={
+                          isLoadingLocalities
+                            ? "Carregando bairros..."
+                            : "Selecione o bairro"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {localities.map((loc) => (
+                        <SelectItem key={loc.id} value={loc.id}>
+                          {loc.name} (+{currencyFormat(loc.deliveryFee)})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="reference">Referência (opcional)</Label>
@@ -417,7 +425,6 @@ export default function CheckoutClient({
         </Card>
       </div>
 
-      {/* Coluna de Resumo e Pagamento */}
       <div className="lg:col-span-1 space-y-6">
         <Card>
           <CardHeader>

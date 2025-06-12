@@ -22,14 +22,13 @@ export default async function OrderConfirmationPage({
   const { orderId } = searchParams;
   const session = await auth();
 
-  if (!orderId || !session?.user) {
+  if (!orderId) {
     return redirect("/");
   }
 
-  const order = await db.order.findFirst({
+  const order = await db.order.findUnique({
     where: {
       id: orderId,
-      userId: session.user.id,
     },
     include: {
       address: {
@@ -37,7 +36,12 @@ export default async function OrderConfirmationPage({
           locality: true,
         },
       },
-      user: true,
+
+      user: {
+        select: {
+          name: true,
+        },
+      },
     },
   });
 
@@ -45,12 +49,15 @@ export default async function OrderConfirmationPage({
     return redirect("/");
   }
 
+  const displayName = order.isGuestOrder ? order.guestName : order.user?.name;
+
   return (
     <div className="container mx-auto flex flex-col items-center justify-center p-4 md:p-10 text-center">
       <CheckCircle2 size={64} className="text-green-600 mb-4" />
       <h1 className="text-3xl font-bold text-foreground">Pedido Confirmado!</h1>
       <p className="text-muted-foreground mt-2 text-lg">
-        Obrigado, {order.user!.name}! Seu pedido foi recebido com sucesso.
+        Obrigado, {displayName || "Cliente"}! Seu pedido foi recebido com
+        sucesso.
       </p>
 
       <Card className="mt-8 w-full max-w-lg text-left">
@@ -99,9 +106,11 @@ export default async function OrderConfirmationPage({
       </Card>
 
       <div className="mt-8 flex flex-col sm:flex-row gap-4 w-full max-w-lg">
-        <Button asChild className="flex-1" size="lg">
-          <Link href="/pedidos">Acompanhar Meus Pedidos</Link>
-        </Button>
+        {session?.user && (
+          <Button asChild className="flex-1" size="lg">
+            <Link href="/pedidos">Acompanhar Meus Pedidos</Link>
+          </Button>
+        )}
         <Button asChild variant="outline" className="flex-1" size="lg">
           <Link href="/">Voltar ao Cardápio</Link>
         </Button>

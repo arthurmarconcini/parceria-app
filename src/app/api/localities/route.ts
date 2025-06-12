@@ -5,7 +5,6 @@ export async function GET() {
   try {
     const localities = await db.locality.findMany({
       include: {
-        // Inclui o modelo 'RestaurantCity' relacionado
         city: true,
       },
       orderBy: {
@@ -13,11 +12,9 @@ export async function GET() {
       },
     });
 
-    // Mapeia o resultado para adicionar o 'state' se necessário,
-    // mantendo a lógica centralizada no backend.
     const response = localities.map((loc) => ({
       ...loc,
-      state: "ES", // Assumindo "ES" como estado fixo para todas as cidades, ajuste se necessário.
+      state: "ES",
     }));
 
     return NextResponse.json(response);
