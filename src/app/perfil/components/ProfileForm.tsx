@@ -21,6 +21,7 @@ import { updateUserProfile } from "../actions/PerfilActions";
 const profileFormSchema = z.object({
   name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres."),
   email: z.string().email("Email inválido."),
+  phone: z.string().min(10, "O telefone deve ter pelo menos 10 caracteres."),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -37,6 +38,7 @@ export const ProfileForm = ({ user }: ProfileFormProps) => {
     defaultValues: {
       name: user.name || "",
       email: user.email || "",
+      phone: user.phone || "",
     },
   });
 
@@ -44,6 +46,7 @@ export const ProfileForm = ({ user }: ProfileFormProps) => {
     startTransition(async () => {
       const result = await updateUserProfile({
         name: data.name,
+        phone: data.phone,
       });
 
       if (result.success) {
@@ -78,6 +81,20 @@ export const ProfileForm = ({ user }: ProfileFormProps) => {
               <FormLabel>Email</FormLabel>
               <FormControl>
                 <Input placeholder="Seu email" {...field} disabled />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="phone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Telefone</FormLabel>
+              <FormControl>
+                <Input placeholder="Seu telefone" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

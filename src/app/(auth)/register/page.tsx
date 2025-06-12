@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-// Assumindo que você tem este componente
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState(""); // 1. Adicionar estado para o telefone
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -33,13 +33,20 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!phone.trim()) {
+      setError("O telefone é obrigatório");
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name, email, password }),
+
+        body: JSON.stringify({ name, email, password, phone }),
       });
 
       const data = await response.json();
@@ -108,6 +115,24 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Seu email"
+                required
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label
+                htmlFor="phone"
+                className="text-sm font-medium text-foreground"
+              >
+                Telefone
+              </label>
+              <Input
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="(00) 00000-0000"
                 required
                 className="w-full"
               />

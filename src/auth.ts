@@ -1,5 +1,3 @@
-// src/auth.ts
-
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
@@ -56,6 +54,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id;
         token.role = (user as User).role;
+        token.phone = (user as User).phone; //
       }
 
       if (trigger === "update" && session) {
@@ -69,6 +68,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (token) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.phone = token.phone as string;
       }
       return session;
     },

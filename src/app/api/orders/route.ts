@@ -1,6 +1,6 @@
 import { db } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { OrderExtra, OrderItem, PaymentMethod, Prisma } from "@prisma/client";
+import { OrderExtra, PaymentMethod, Prisma } from "@prisma/client";
 import Pusher from "pusher";
 
 const pusher = new Pusher({
@@ -16,12 +16,14 @@ export async function POST(req: NextRequest) {
     userId,
     guestName,
     guestPhone,
-    address,
+    address, // Para convidados
+    addressId, // 1. Receber o addressId para usuários logados
     total,
     paymentMethod,
     requiresChange,
     changeFor,
     items,
+    deliveryFee, // Certifique-se de que deliveryFee está sendo recebido
   } = await req.json();
 
   if (!userId && (!guestName || !guestPhone)) {
@@ -34,20 +36,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Validação dos campos obrigatórios
-  if (!address || !total || !paymentMethod) {
+  // 2. Modificar a validação para aceitar 'address' OU 'addressId'
+  if ((!address && !addressId) || !total || !paymentMethod) {
     return NextResponse.json(
       {
-        error: "Campos obrigatórios ausentes: address, total ou paymentMethod.",
+        error:
+          "Campos obrigatórios ausentes: endereço, total ou paymentMethod.",
       },
       { status: 400 }
     );
   }
 
-  // Validação específica para CASH
   if (paymentMethod === "CASH") {
     if (requiresChange === true) {
-      if (!changeFor || changeFor <= total) {
+      if (!changeFor || changeFor <= total + (deliveryFee || 0)) {
         return NextResponse.json(
           {
             error:
@@ -58,7 +60,6 @@ export async function POST(req: NextRequest) {
       }
     }
   } else {
-    // Garante que requiresChange e changeFor sejam null para métodos diferentes de CASH
     if (requiresChange !== null || changeFor !== null) {
       return NextResponse.json(
         {
@@ -70,7 +71,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Validação dos itens
   if (!items || !Array.isArray(items) || items.length === 0) {
     return NextResponse.json(
       { error: "O pedido deve conter ao menos um item." },
@@ -83,84 +83,103 @@ export async function POST(req: NextRequest) {
   const ordersToday = await db.order.count({
     where: {
       createdAt: {
-        gte: new Date(today), // Pedidos a partir de 00:00 do dia atual
-        lt: new Date(new Date(today).setDate(new Date(today).getDate() + 1)), // Até 00:00 do próximo dia
+        gte: new Date(today),
+        lt: new Date(new Date(today).setDate(new Date(today).getDate() + 1)),
       },
     },
   });
 
-  const nextOrderNumber = String(ordersToday + 1).padStart(3, "0"); // Garante 3 dígitos (ex.: 001)
-  const orderNumber = `${today}-${nextOrderNumber}`; // Ex.: 2025-05-07-001
+  const nextOrderNumber = String(ordersToday + 1).padStart(3, "0");
+  const orderNumber = `${today}-${nextOrderNumber}`;
 
   try {
-    const createdAddress = await db.address.create({
-      data: {
-        street: address.street,
-        number: address.number,
-        city: address.city,
-        state: address.state,
-        localityId: address.localityId,
-        userId: userId || null,
-      },
-    });
+    let finalAddressId: string;
+
+    // 3. Lógica condicional para o endereço
+    if (userId && addressId) {
+      // Para usuário logado, apenas usamos o ID do endereço existente.
+      finalAddressId = addressId;
+    } else if (!userId && address) {
+      // Para convidado, criamos um novo endereço.
+      const createdAddress = await db.address.create({
+        data: {
+          street: address.street,
+          number: address.number,
+          city: address.city,
+          state: address.state,
+          localityId: address.localityId,
+          userId: null,
+          reference: address.reference || null,
+          observation: address.observation || null,
+          zipCode: address.zipCode || null,
+        },
+      });
+      finalAddressId = createdAddress.id;
+    } else {
+      throw new Error("Dados de endereço inválidos.");
+    }
 
     const order = await db.order.create({
       data: {
-        ...(userId
-          ? { userId: userId }
-          : { guestName: guestName, guestPhone: guestPhone }),
-        addressId: createdAddress.id,
-        total,
         orderNumber,
-        isGuestOrder: !userId,
+        total,
+        deliveryFee, // Incluir a taxa de entrega
+        isDelivery: true, // Assumindo que todos os pedidos são para entrega
         paymentMethod: paymentMethod as PaymentMethod,
         requiresChange: paymentMethod === "CASH" ? requiresChange : null,
         changeFor:
           paymentMethod === "CASH" && requiresChange ? changeFor : null,
+        addressId: finalAddressId, // 4. Usar o ID do endereço final (novo ou existente)
+        isGuestOrder: !userId,
+        ...(userId
+          ? { userId: userId }
+          : { guestName: guestName, guestPhone: guestPhone }),
         items: {
-          create: items.map((item: OrderItem) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            priceAtTime: item.priceAtTime,
-            observation: item.observation || null,
-            sizeId: item.sizeId || null,
-          })),
+          create: items.map(
+            (
+              item: Prisma.OrderItemCreateManyOrderInput & {
+                halfhalf: true;
+                orderExtras: true;
+              }
+            ) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              priceAtTime: item.priceAtTime,
+              observation: item.observation || null,
+              sizeId: item.sizeId || null,
+            })
+          ),
         },
       },
-
       include: {
-        items: {
-          include: {
-            product: true,
-            Size: true,
-            orderExtras: { include: { extra: true } },
-            HalfHalf: { include: { firstHalf: true, secondHalf: true } },
-          },
-        },
+        items: true,
         user: true,
         address: { include: { locality: true } },
       },
     });
 
-    // Lógica para criar HalfHalf e OrderExtras
     const itemPromises = items.map(
       async (
         item: Prisma.OrderItemGetPayload<{
           include: {
-            HalfHalf: { include: { firstHalf: true; secondHalf: true } };
-            orderExtras: { include: { extra: true } };
+            HalfHalf: true;
+            orderExtras: true;
           };
         }>,
         index: number
       ) => {
         const createdOrderItem = order.items[index];
 
-        if (item.HalfHalf) {
+        if (
+          item.HalfHalf &&
+          item.HalfHalf.firstHalfId &&
+          item.HalfHalf.secondHalfId
+        ) {
           await db.halfHalf.create({
             data: {
               orderItemId: createdOrderItem.id,
-              firstHalfId: item.HalfHalf.firstHalf.id,
-              secondHalfId: item.HalfHalf.secondHalf.id,
+              firstHalfId: item.HalfHalf.firstHalfId,
+              secondHalfId: item.HalfHalf.secondHalfId,
             },
           });
         }
@@ -198,29 +217,28 @@ export async function POST(req: NextRequest) {
 
     await pusher.trigger("pedidos", "novo-pedido", completeOrder);
 
-    return NextResponse.json(completeOrder, { status: 201 }); // Retorna o pedido completo
+    return NextResponse.json(completeOrder, { status: 201 });
   } catch (error) {
     console.error("Erro ao criar pedido:", error);
-    return NextResponse.json(
-      { error: "Erro ao criar pedido." },
-      { status: 500 }
-    );
+    const errorMessage =
+      error instanceof Error ? error.message : "Erro interno do servidor.";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
 export async function GET() {
   try {
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Define para o início do dia (00:00:00)
+    today.setHours(0, 0, 0, 0);
 
     const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1); // Define para o início do próximo dia
+    tomorrow.setDate(today.getDate() + 1);
 
     const orders = await db.order.findMany({
       where: {
         createdAt: {
-          gte: today, // Maior ou igual ao início de hoje
-          lt: tomorrow, // Menor que o início de amanhã
+          gte: today,
+          lt: tomorrow,
         },
       },
       include: {

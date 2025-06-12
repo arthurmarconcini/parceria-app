@@ -1,11 +1,13 @@
 import { User as PrismaUser } from "@prisma/client";
 
 declare module "next-auth" {
-  interface User extends Pick<PrismaUser, "id" | "email" | "name" | "role"> {
+  interface User
+    extends Pick<PrismaUser, "id" | "email" | "name" | "role" | "phone"> {
     id: string;
     role?: string;
     name?: string | null;
     email: string | null;
+    phone: string | null;
   }
 
   interface Session {
@@ -13,7 +15,8 @@ declare module "next-auth" {
       id: string;
       email: string | null;
       name?: string | null;
-      role?: string; // Adiciona role à sessão
+      role?: string;
+      phone?: string | null;
     };
   }
 }
@@ -21,8 +24,9 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
-    role?: string; // Já existe
-    name?: string | null; // Adicione se não estiver
-    email: string | null; // Adicione se não estiver// Adiciona role ao token
+    role?: string;
+    name?: string | null;
+    email: string | null;
+    phone?: string | null;
   }
 }

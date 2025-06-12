@@ -3,11 +3,11 @@ import { db as prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
-  const { name, email, password } = await request.json();
+  const { name, email, password, phone } = await request.json();
 
-  if (!name || !email || !password) {
+  if (!name || !email || !password || !phone) {
     return NextResponse.json(
-      { error: "Nome, email e senha são obrigatórios" },
+      { error: "Nome, email, senha e telefone são obrigatórios" },
       { status: 400 }
     );
   }
@@ -25,13 +25,20 @@ export async function POST(request: Request) {
       name,
       email,
       password: hashedPassword,
+      phone,
     },
   });
 
   return NextResponse.json(
     {
       message: "Usuário criado",
-      user: { id: user.id, email: user.email, name: user.name },
+
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        phone: user.phone,
+      },
     },
     { status: 201 }
   );

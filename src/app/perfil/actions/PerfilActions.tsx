@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 
 interface UpdateUserArgs {
   name: string;
+  phone: string;
 }
 
 export const updateUserProfile = async (data: UpdateUserArgs) => {
@@ -19,6 +20,7 @@ export const updateUserProfile = async (data: UpdateUserArgs) => {
       where: { id: session.user.id },
       data: {
         name: data.name,
+        phone: data.phone,
       },
     });
 
