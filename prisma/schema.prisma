@@ -167,6 +167,7 @@ model Product {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   isHalfHalf  Boolean? // campo para indicar se o produto é meio a meio
+  isActive    Boolean  @default(true) // campo para indicar se o produto está ativo ou não
 
   category         Category    @relation(fields: [categoryId], references: [id])
   orderItems       OrderItem[] // Produtos aparecem em itens de pedido

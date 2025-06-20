@@ -142,12 +142,13 @@ const addProduct = async (formData: FormData): Promise<AddProductResult> => {
 
 const deleteProduct = async (id: string): Promise<boolean> => {
   try {
-    await db.product.delete({
+    await db.product.update({
       where: { id },
+      data: { isActive: false },
     });
     return true;
   } catch (error) {
-    console.error("Erro ao deletar produto:", error);
+    console.error("Erro ao arquivar produto:", error);
     return false;
   }
 };

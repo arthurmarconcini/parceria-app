@@ -11,8 +11,8 @@ const ProductPage = async ({ params }: ProductPageProps) => {
   const { id } = await params;
 
   const product = await db.product.findUnique({
-    //
-    where: { id },
+    where: { id, isActive: true },
+
     include: {
       Extras: true,
       Size: true,
@@ -21,7 +21,6 @@ const ProductPage = async ({ params }: ProductPageProps) => {
   });
 
   if (!product) {
-    //
     return notFound();
   }
 
@@ -30,7 +29,6 @@ const ProductPage = async ({ params }: ProductPageProps) => {
   }>[] = [];
   if (product.category.name.toLowerCase() === "pizzas" && product.isHalfHalf) {
     pizzasForHalfHalf = await db.product.findMany({
-      //
       where: {
         categoryId: product.categoryId,
       },
@@ -42,7 +40,6 @@ const ProductPage = async ({ params }: ProductPageProps) => {
 
   return (
     <div className="container mx-auto max-w-4xl pb-28 md:pb-24">
-      {" "}
       {/* Aumentado padding p/ mobile */}
       <ProductClient product={product} pizzas={pizzasForHalfHalf} />
     </div>

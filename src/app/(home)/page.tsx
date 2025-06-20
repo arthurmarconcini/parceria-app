@@ -11,6 +11,9 @@ export default async function Home() {
   const categories = await db.category.findMany({
     include: {
       products: {
+        where: {
+          isActive: true,
+        },
         include: {
           Size: true,
         },

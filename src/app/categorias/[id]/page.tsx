@@ -21,6 +21,9 @@ const CategoryPage = async ({ params }: CategoryPageProps) => {
     },
     include: {
       products: {
+        where: {
+          isActive: true,
+        },
         include: {
           Size: true,
         },
