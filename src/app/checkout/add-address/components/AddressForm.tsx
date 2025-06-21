@@ -56,13 +56,13 @@ export default function AddressForm({
     observation: "",
     error: null,
   });
-  const [isSubmitting, setIsSubmitting] = useState(false); // Controle de envio
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleZipCodeChange = async (zipCode: string) => {
     setFormState((prev) => ({ ...prev, zipCode, error: null }));
 
     if (!zipCode || !isValidBrazilianZipCode(zipCode)) {
-      return; // CEP não é obrigatório, apenas ignora se inválido
+      return;
     }
 
     try {
@@ -115,7 +115,7 @@ export default function AddressForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return; // Impede cliques múltiplos
+    if (isSubmitting) return;
 
     setIsSubmitting(true);
     const formData = new FormData(e.target as HTMLFormElement);

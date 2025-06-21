@@ -1,9 +1,15 @@
 "use client";
 
-import { Address, Locality, PaymentMethod, Prisma } from "@prisma/client";
+import {
+  Address,
+  Locality,
+  PaymentMethod,
+  Prisma,
+  RestaurantCity,
+} from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import Link from "next/link";
+
 import { toast } from "sonner";
 
 import { useCartStore } from "@/hooks/cartStore";
@@ -23,7 +29,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import ConfirmDeleteAddressDialog from "./ConfirmDeleteAddressDialog";
-import { Loader2, Trash2Icon } from "lucide-react";
+import { Loader2, PlusCircle, Trash2Icon } from "lucide-react";
+import { createAddressAction } from "@/app/actions/AddressActions";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import AddressForm from "../add-address/components/AddressForm";
 
 // Tipos
 type UserPayload = {
@@ -39,6 +54,9 @@ type LocalityWithCity = Prisma.LocalityGetPayload<{
 type CheckoutClientProps = {
   addresses: (Address & { locality: Locality | null })[];
   user: UserPayload | null | undefined;
+
+  restaurantCity: RestaurantCity;
+  restaurantState: string;
 };
 
 type GuestAddressState = {
@@ -53,6 +71,9 @@ type GuestAddressState = {
 export default function CheckoutClient({
   addresses: initialAddresses,
   user,
+  restaurantCity,
+
+  restaurantState,
 }: CheckoutClientProps) {
   const router = useRouter();
   const { cart, getTotalPrice, clearCart } = useCartStore();
@@ -85,6 +106,8 @@ export default function CheckoutClient({
   const [addressToDeleteId, setAddressToDeleteId] = useState<string | null>(
     null
   );
+
+  const [isAddressModalOpen, setAddressModalOpen] = useState(false);
 
   const totalPrice = getTotalPrice();
   const selectedLocality = isGuest
@@ -161,6 +184,29 @@ export default function CheckoutClient({
     } finally {
       setConfirmDeleteOpen(false);
       setAddressToDeleteId(null);
+    }
+  };
+
+  const handleCreateAddressInModal = async (formData: FormData) => {
+    const data = {
+      street: formData.get("street") as string,
+      number: formData.get("number") as string,
+      zipCode: formData.get("zipCode") as string | null,
+      localityId: formData.get("localityId") as string,
+      reference: formData.get("reference") as string | null,
+      observation: formData.get("observation") as string | null,
+      city: restaurantCity.name,
+      state: restaurantState,
+      isDefault: true, // Novos endereços são sempre padrão por padrão
+    };
+
+    const result = await createAddressAction(data);
+
+    if (result.success) {
+      toast.success("Endereço adicionado com sucesso!");
+      setAddressModalOpen(false);
+    } else {
+      toast.error(!result.success || "Falha ao adicionar endereço.");
     }
   };
 
@@ -414,11 +460,32 @@ export default function CheckoutClient({
                     </Label>
                   ))}
                 </RadioGroup>
-                <Button variant="outline" className="mt-4" asChild>
-                  <Link href="/checkout/add-address">
-                    Adicionar Novo Endereço
-                  </Link>
-                </Button>
+                <Dialog
+                  open={isAddressModalOpen}
+                  onOpenChange={setAddressModalOpen}
+                >
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="mt-4 w-full flex items-center gap-2"
+                    >
+                      <PlusCircle className="h-4 w-4" />
+                      Adicionar Novo Endereço
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Adicionar Novo Endereço</DialogTitle>
+                    </DialogHeader>
+                    {/* Formulário reutilizado dentro do modal */}
+                    <AddressForm
+                      localities={localities}
+                      restaurantCity={restaurantCity}
+                      restaurantState={restaurantState}
+                      createAddress={handleCreateAddressInModal}
+                    />
+                  </DialogContent>
+                </Dialog>
               </>
             )}
           </CardContent>
@@ -522,13 +589,6 @@ export default function CheckoutClient({
           )}
         </Button>
       </div>
-
-      <ConfirmDeleteAddressDialog
-        open={isConfirmDeleteOpen}
-        modalOpen={setConfirmDeleteOpen}
-        addressId={addressToDeleteId!}
-        handleDeleteAddress={handleDeleteAddress}
-      />
     </form>
   );
 }
