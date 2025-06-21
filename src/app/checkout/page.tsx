@@ -9,6 +9,7 @@ export default async function CheckoutPage() {
     ? await db.address.findMany({
         where: {
           userId: session.user.id,
+          isActive: true,
         },
         include: {
           locality: true,
