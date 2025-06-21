@@ -21,17 +21,28 @@ export default async function ProfilePage() {
     redirect("/login");
   }
 
-  /* const addresses = await db.address.findMany({
+  const addresses = await db.address.findMany({
     where: {
       userId: session.user.id,
+      isActive: true, // <<< Adicionar este filtro
     },
     include: {
       locality: true,
     },
     orderBy: {
-      isDefault: "desc",S
+      isDefault: "desc",
     },
-  }); */
+  });
+
+  const restaurantCity = await db.restaurantCity.findFirst();
+  const restaurantState = restaurantCity?.name === "Guarapari" ? "ES" : "ES";
+
+  const localities = restaurantCity
+    ? await db.locality.findMany({
+        where: { cityId: restaurantCity.id },
+        orderBy: { name: "asc" },
+      })
+    : [];
 
   return (
     <div className="container mx-auto p-4 md:p-6">
@@ -40,7 +51,13 @@ export default async function ProfilePage() {
         <h1 className="text-2xl font-bold tracking-tight">Meu Perfil</h1>
       </div>
 
-      <ProfileClient user={user} />
+      <ProfileClient
+        user={user}
+        addresses={addresses}
+        localities={localities}
+        restaurantCity={restaurantCity}
+        restaurantState={restaurantState}
+      />
     </div>
   );
 }

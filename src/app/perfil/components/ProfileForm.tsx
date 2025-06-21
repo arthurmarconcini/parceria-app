@@ -28,9 +28,10 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 interface ProfileFormProps {
   user: User;
+  onProfileUpdate: (updatedUser: User) => void;
 }
 
-export const ProfileForm = ({ user }: ProfileFormProps) => {
+export const ProfileForm = ({ user, onProfileUpdate }: ProfileFormProps) => {
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<ProfileFormValues>({
@@ -49,10 +50,11 @@ export const ProfileForm = ({ user }: ProfileFormProps) => {
         phone: data.phone,
       });
 
-      if (result.success) {
-        toast.success(result.success);
+      if (result.success && result.user) {
+        toast.success("Perfil atualizado com sucesso!");
+        onProfileUpdate(result.user);
       } else {
-        toast.error(result.error);
+        toast.error(result.error || "Falha ao atualizar o perfil.");
       }
     });
   };
