@@ -23,9 +23,8 @@ export default async function AddAddressPage() {
   }
 
   const restaurantCity = { id: city.id, name: city.name };
-  const restaurantState = city.name === "Guarapari" ? "ES" : "Outro"; // Ajuste conforme a lógica real
+  const restaurantState = city.name === "Guarapari" ? "ES" : "Outro";
 
-  // Carrega as localidades disponíveis para a cidade do restaurante
   const localities = await db.locality.findMany({
     where: { cityId: city.id },
     orderBy: { name: "asc" },

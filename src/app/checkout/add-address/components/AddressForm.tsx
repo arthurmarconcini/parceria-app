@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 interface Locality {
   id: string;
@@ -30,7 +30,7 @@ interface FormState {
 
 interface AddressFormProps {
   restaurantCity: { id: string; name: string };
-  restaurantState: string; // Novo: estado fixo
+  restaurantState: string;
   localities: Locality[];
   createAddress: (formData: FormData) => Promise<void>;
 }
@@ -57,6 +57,7 @@ export default function AddressForm({
     error: null,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
 
   const handleZipCodeChange = async (zipCode: string) => {
     setFormState((prev) => ({ ...prev, zipCode, error: null }));
@@ -113,12 +114,21 @@ export default function AddressForm({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async () => {
     if (isSubmitting) return;
 
     setIsSubmitting(true);
-    const formData = new FormData(e.target as HTMLFormElement);
+
+    const formData = new FormData();
+    formData.append("street", formState.street);
+    formData.append("number", formState.number);
+    formData.append("zipCode", formState.zipCode);
+    formData.append("localityId", formState.localityId);
+    formData.append("reference", formState.reference);
+    formData.append("observation", formState.observation);
+    // Campos fixos
+    formData.append("city", restaurantCity.name);
+    formData.append("state", restaurantState);
 
     try {
       await createAddress(formData);
@@ -133,114 +143,110 @@ export default function AddressForm({
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <div ref={formRef} className="space-y-4">
       {formState.error && (
         <p className="text-red-500 mb-4">{formState.error}</p>
       )}
-      <div className="space-y-4">
-        <div className="space-y-1">
-          <Label>CEP (opcional)</Label>
+      <div className="space-y-1">
+        <Label>CEP (opcional)</Label>
+        <Input
+          name="zipCode"
+          value={formState.zipCode}
+          onChange={(e) => handleZipCodeChange(e.target.value)}
+          placeholder="Ex.: 12345-678"
+        />
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="space-y-1 col-span-2">
+          <Label>Rua</Label>
           <Input
-            name="zipCode"
-            value={formState.zipCode}
-            onChange={(e) => handleZipCodeChange(e.target.value)}
-            placeholder="Ex.: 12345-678"
-          />
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="space-y-1 col-span-2">
-            <Label>Rua</Label>
-            <Input
-              name="street"
-              value={formState.street}
-              onChange={(e) =>
-                setFormState((prev) => ({ ...prev, street: e.target.value }))
-              }
-              required
-            />
-          </div>
-          <div className="space-y-1 ">
-            <Label>Número</Label>
-            <Input
-              name="number"
-              value={formState.number}
-              onChange={(e) =>
-                setFormState((prev) => ({ ...prev, number: e.target.value }))
-              }
-              required
-            />
-          </div>
-        </div>
-
-        <div className="flex gap-2">
-          <div className="space-y-1">
-            <Label>Cidade</Label>
-            <Input
-              name="city"
-              value={restaurantCity.name}
-              readOnly
-              className="bg-gray-100 cursor-not-allowed"
-            />
-          </div>
-          <div className="space-y-1">
-            <Label>Estado</Label>
-            <Input
-              name="state"
-              value={restaurantState}
-              readOnly
-              className="bg-gray-100 cursor-not-allowed"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-1">
-          <Label>Localidade (Bairro)</Label>
-          <Select
-            name="localityId"
-            value={formState.localityId}
-            onValueChange={(value) =>
-              setFormState((prev) => ({ ...prev, localityId: value }))
+            name="street"
+            value={formState.street}
+            onChange={(e) =>
+              setFormState((prev) => ({ ...prev, street: e.target.value }))
             }
             required
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione um bairro" />
-            </SelectTrigger>
-            <SelectContent>
-              {localities.map((locality) => (
-                <SelectItem key={locality.id} value={locality.id}>
-                  {locality.name} (Frete: R$ {locality.deliveryFee.toFixed(2)})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <Label>Referência (opcional)</Label>
-          <Input
-            name="reference"
-            value={formState.reference}
-            onChange={(e) =>
-              setFormState((prev) => ({ ...prev, reference: e.target.value }))
-            }
-            placeholder="Ex.: fundos, portão preto"
           />
         </div>
-        <div className="space-y-1">
-          <Label>Observações (opcional)</Label>
+        <div className="space-y-1 ">
+          <Label>Número</Label>
           <Input
-            name="observation"
-            value={formState.observation}
+            name="number"
+            value={formState.number}
             onChange={(e) =>
-              setFormState((prev) => ({ ...prev, observation: e.target.value }))
+              setFormState((prev) => ({ ...prev, number: e.target.value }))
             }
-            placeholder="Ex.: apertar campainha, entregar ao porteiro"
+            required
           />
         </div>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Salvando..." : "Salvar Endereço"}
-        </Button>
       </div>
-    </form>
+      <div className="flex gap-2">
+        <div className="space-y-1">
+          <Label>Cidade</Label>
+          <Input
+            name="city"
+            value={restaurantCity.name}
+            readOnly
+            className="bg-gray-100 cursor-not-allowed"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label>Estado</Label>
+          <Input
+            name="state"
+            value={restaurantState}
+            readOnly
+            className="bg-gray-100 cursor-not-allowed"
+          />
+        </div>
+      </div>
+      <div className="space-y-1">
+        <Label>Localidade (Bairro)</Label>
+        <Select
+          name="localityId"
+          value={formState.localityId}
+          onValueChange={(value) =>
+            setFormState((prev) => ({ ...prev, localityId: value }))
+          }
+          required
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione um bairro" />
+          </SelectTrigger>
+          <SelectContent>
+            {localities.map((locality) => (
+              <SelectItem key={locality.id} value={locality.id}>
+                {locality.name} (Frete: R$ {locality.deliveryFee.toFixed(2)})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1">
+        <Label>Referência (opcional)</Label>
+        <Input
+          name="reference"
+          value={formState.reference}
+          onChange={(e) =>
+            setFormState((prev) => ({ ...prev, reference: e.target.value }))
+          }
+          placeholder="Ex.: fundos, portão preto"
+        />
+      </div>
+      <div className="space-y-1">
+        <Label>Observações (opcional)</Label>
+        <Input
+          name="observation"
+          value={formState.observation}
+          onChange={(e) =>
+            setFormState((prev) => ({ ...prev, observation: e.target.value }))
+          }
+          placeholder="Ex.: apertar campainha, entregar ao porteiro"
+        />
+      </div>
+      <Button type="button" onClick={handleSave} disabled={isSubmitting}>
+        {isSubmitting ? "Salvando..." : "Salvar Endereço"}
+      </Button>
+    </div>
   );
 }
