@@ -14,7 +14,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { RestaurantCity } from "@prisma/client";
 import { createAddressAction } from "@/app/actions/AddressActions";
-import AddressForm from "../add-address/components/AddressForm";
+import AddressForm from "./AddressForm";
 import { AddressWithLocality, LocalityWithCity } from "./CheckoutClient";
 
 interface AddressSelectionProps {

@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Locality } from "@prisma/client";
 import { createAddressAction } from "@/app/actions/AddressActions";
-import AddressForm from "@/app/checkout/add-address/components/AddressForm";
+import AddressForm from "@/app/checkout/components/AddressForm";
 
 // Props para carregar dados necessários para o formulário
 interface AddressFormModalProps {

@@ -8,7 +8,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import AddressForm from "@/app/checkout/add-address/components/AddressForm";
+import AddressForm from "@/app/checkout/components/AddressForm";
 import { Locality, RestaurantCity } from "@prisma/client";
 import { PlusCircle } from "lucide-react";
 
