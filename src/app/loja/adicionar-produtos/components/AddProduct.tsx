@@ -18,13 +18,6 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { addProduct } from "../actions/product";
@@ -173,7 +166,7 @@ export default function AddProduct({ categories }: AddProductProps) {
           <ScrollArea className="max-h-[70vh] p-1">
             <div className="space-y-4 px-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                <div className="space-y-1.5">
                   <Label htmlFor="name">Nome do Produto</Label>
                   <Input
                     id="name"
@@ -186,20 +179,24 @@ export default function AddProduct({ categories }: AddProductProps) {
                     </p>
                   )}
                 </div>
-                <div>
+                <div className="space-y-1.5">
                   <Label htmlFor="categoryId">Categoria</Label>
-                  <Select value={categoryId} onValueChange={setCategoryId}>
-                    <SelectTrigger id="categoryId">
-                      <SelectValue placeholder="Selecione uma categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <select
+                    id="categoryId"
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
+                    className="w-full h-9 min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]
+                    "
+                  >
+                    <option value="" disabled>
+                      Selecione uma categoria
+                    </option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
                   {errors.categoryId && (
                     <p className="text-destructive text-sm mt-1">
                       {errors.categoryId}
@@ -209,7 +206,7 @@ export default function AddProduct({ categories }: AddProductProps) {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                <div className="space-y-1.5">
                   <Label htmlFor="price">Preço Base</Label>
                   <Input
                     id="price"
@@ -228,7 +225,7 @@ export default function AddProduct({ categories }: AddProductProps) {
                     </p>
                   )}
                 </div>
-                <div>
+                <div className="space-y-1.5">
                   <Label htmlFor="discount">Desconto (%)</Label>
                   <Input
                     id="discount"
@@ -240,7 +237,7 @@ export default function AddProduct({ categories }: AddProductProps) {
                 </div>
               </div>
 
-              <div>
+              <div className="space-y-1.5">
                 <Label htmlFor="description">Descrição</Label>
                 <Input
                   id="description"
@@ -255,7 +252,7 @@ export default function AddProduct({ categories }: AddProductProps) {
                 )}
               </div>
 
-              <div>
+              <div className="space-y-1.5">
                 <Label htmlFor="imageUrl">URL da Imagem (opcional)</Label>
                 <Input
                   id="imageUrl"
@@ -287,7 +284,7 @@ export default function AddProduct({ categories }: AddProductProps) {
                   <Label className="font-semibold">Tamanhos da Pizza</Label>
                   {sizes.map((size, index) => (
                     <div key={index} className="flex items-start gap-2">
-                      <div className="flex-1">
+                      <div className="flex-1 space-y-1.5">
                         <Input
                           placeholder={`Nome (Ex: Média)`}
                           value={size.name}
@@ -301,7 +298,7 @@ export default function AddProduct({ categories }: AddProductProps) {
                           </p>
                         )}
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 space-y-1.5">
                         <Input
                           placeholder="Preço"
                           value={size.price}

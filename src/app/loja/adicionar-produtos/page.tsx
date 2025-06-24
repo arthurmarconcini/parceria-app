@@ -10,13 +10,27 @@ import { db } from "@/lib/prisma";
 import AddProduct from "./components/AddProduct";
 import { formatBRL } from "@/helpers/currency-format";
 import ConfirmDeleteProductDialog from "./components/ConfirmDeleteProductDialog";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 const AddProductsPage = async () => {
   const products = await db.product.findMany({
     where: { isActive: true },
     include: {
       category: true,
-      Size: true,
+      Size: {
+        orderBy: {
+          price: "asc",
+        },
+      },
     },
     orderBy: {
       createdAt: "desc",
@@ -43,6 +57,9 @@ const AddProductsPage = async () => {
               <TableHead>Produto</TableHead>
               <TableHead className="hidden md:table-cell">Categoria</TableHead>
               <TableHead>Preço</TableHead>
+              <TableHead className="hidden md:table-cell text-center">
+                Desconto
+              </TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -51,30 +68,54 @@ const AddProductsPage = async () => {
               <TableRow key={product.id}>
                 <TableCell className="font-medium">
                   {product.name}
-                  <p className="text-xs text-muted-foreground md:hidden">
-                    {product.category.name}
-                  </p>
+                  <div className="text-xs text-muted-foreground md:hidden mt-1">
+                    <p>{product.category.name}</p>
+                    {product.discount && product.discount > 0 && (
+                      <p>
+                        Desconto:{" "}
+                        <Badge variant="destructive">
+                          {product.discount}% OFF
+                        </Badge>
+                      </p>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   {product.category.name}
                 </TableCell>
                 <TableCell>
-                  {product.category.name.toLowerCase() === "pizzas" ? (
-                    <div className="text-xs space-y-1">
-                      {product.Size.map((size) => (
-                        <div
-                          key={size.id}
-                          className="flex justify-between items-center gap-2"
-                        >
-                          <span>{size.name}:</span>
-                          <span className="font-semibold">
-                            {formatBRL(size.price)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                  {product.Size && product.Size.length > 0 ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="text-xs h-auto p-1">
+                          A partir de {formatBRL(product.Size[0].price)}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuLabel>Tamanhos e Preços</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {product.Size.map((size) => (
+                          <DropdownMenuItem
+                            key={size.id}
+                            className="flex justify-between"
+                          >
+                            <span>{size.name}</span>
+                            <span className="font-semibold ml-4">
+                              {formatBRL(size.price)}
+                            </span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   ) : (
                     formatBRL(product.price || 0)
+                  )}
+                </TableCell>
+                <TableCell className="hidden md:table-cell text-center">
+                  {product.discount && product.discount > 0 ? (
+                    <Badge variant="destructive">{product.discount}% OFF</Badge>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
                   )}
                 </TableCell>
                 <TableCell className="text-right">

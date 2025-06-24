@@ -240,7 +240,9 @@ export const ProductClient = ({
       quantity,
       sizeId: selectedSizeId,
       halfhalf: payloadMeioAMeio,
-      imageUrl: produtoDaPagina.imageUrl || "",
+      imageUrl:
+        produtoDaPagina.imageUrl ||
+        "https://img.freepik.com/fotos-gratis/um-copo-de-suco-de-laranja-e-frutas-frescas-no-chao-com-cubos-de-gelo_1150-23627.jpg",
       observation: observations || undefined,
       priceAtTime: precoBaseItemCarrinho,
       orderExtras: extrasDoPedido,

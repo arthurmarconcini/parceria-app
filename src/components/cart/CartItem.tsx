@@ -18,7 +18,10 @@ const CartItem = ({ item }: CartItemProps) => {
       <div className="flex gap-2 items-start w-[70%]">
         <div className="relative h-[60px] w-[60px] flex-shrink-0">
           <Image
-            src={item.imageUrl}
+            src={
+              item.imageUrl ||
+              "https://img.freepik.com/fotos-gratis/um-copo-de-suco-de-laranja-e-frutas-frescas-no-chao-com-cubos-de-gelo_1150-23627.jpg"
+            }
             alt={item.name}
             fill
             className="rounded-md object-cover"
