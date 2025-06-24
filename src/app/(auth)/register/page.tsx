@@ -2,74 +2,77 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn } from "next-auth/react";
-import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { registerFormSchema, type RegisterFormValues } from "@/lib/schemas"; // Supondo que você criou este arquivo
 
 export default function RegisterPage() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState(""); // 1. Adicionar estado para o telefone
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
   const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+  const form = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerFormSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      password: "",
+      confirmPassword: "",
+    },
+  });
 
-    if (password !== confirmPassword) {
-      setError("As senhas não coincidem");
-      setLoading(false);
-      return;
-    }
+  const { isSubmitting } = form.formState;
 
-    if (password.length < 6) {
-      setError("A senha deve ter pelo menos 6 caracteres");
-      setLoading(false);
-      return;
-    }
-
-    if (!phone.trim()) {
-      setError("O telefone é obrigatório");
-      setLoading(false);
-      return;
-    }
+  const onSubmit = async (data: RegisterFormValues) => {
+    setApiError(null);
 
     try {
       const response = await fetch("/api/register", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-
-        body: JSON.stringify({ name, email, password, phone }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
       });
 
-      const data = await response.json();
+      const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Erro ao criar conta");
+        throw new Error(result.error || "Erro ao criar conta");
       }
 
+      toast.success("Conta criada com sucesso! Redirecionando...");
+
       const signInResult = await signIn("credentials", {
-        email,
-        password,
+        email: data.email,
+        password: data.password,
         redirect: false,
       });
 
       if (signInResult?.ok) {
         router.push("/");
+        router.refresh(); // Garante que o estado do servidor (sessão) seja atualizado
       } else {
-        throw new Error("Erro ao fazer login após registro");
+        throw new Error(
+          signInResult?.error || "Erro ao fazer login após registro."
+        );
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Erro desconhecido");
-    } finally {
-      setLoading(false);
+      const errorMessage =
+        err instanceof Error ? err.message : "Ocorreu um erro desconhecido.";
+      setApiError(errorMessage);
+      toast.error(errorMessage);
     }
   };
 
@@ -83,104 +86,95 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label
-                htmlFor="name"
-                className="text-sm font-medium text-foreground"
-              >
-                Nome
-              </label>
-              <Input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Seu nome"
-                required
-                className="w-full"
-              />
-            </div>
-            <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="text-sm font-medium text-foreground"
-              >
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Seu email"
-                required
-                className="w-full"
-              />
-            </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Seu nome completo" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      placeholder="seu@email.com"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Telefone</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="tel"
+                      placeholder="(00) 00000-0000"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Senha</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="Sua senha" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirme a Senha</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="Confirme sua senha"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-            <div className="space-y-2">
-              <label
-                htmlFor="phone"
-                className="text-sm font-medium text-foreground"
-              >
-                Telefone
-              </label>
-              <Input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="(00) 00000-0000"
-                required
-                className="w-full"
-              />
-            </div>
-            <div className="space-y-2">
-              <label
-                htmlFor="password"
-                className="text-sm font-medium text-foreground"
-              >
-                Senha
-              </label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Sua senha"
-                required
-                className="w-full"
-              />
-            </div>
-            <div className="space-y-2">
-              <label
-                htmlFor="confirmPassword"
-                className="text-sm font-medium text-foreground"
-              >
-                Confirme a Senha
-              </label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirme sua senha"
-                required
-                className="w-full"
-              />
-            </div>
-          </div>
+            {apiError && (
+              <p className="text-sm text-destructive text-center">{apiError}</p>
+            )}
 
-          {error && (
-            <p className="text-sm text-destructive text-center">{error}</p>
-          )}
-
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Criando..." : "Criar Conta"}
-          </Button>
-        </form>
+            <Button type="submit" disabled={isSubmitting} className="w-full">
+              {isSubmitting ? "Criando..." : "Criar Conta"}
+            </Button>
+          </form>
+        </Form>
 
         <p className="text-sm text-muted-foreground text-center">
           Já tem uma conta?{" "}
