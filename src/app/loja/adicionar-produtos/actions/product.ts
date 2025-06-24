@@ -1,129 +1,46 @@
 "use server";
 
 import { db } from "@/lib/prisma";
+import { ProductSchemaType } from "@/lib/schemas";
 import { Prisma } from "@prisma/client";
+import { revalidatePath } from "next/cache";
 
-interface SizeInput {
-  name: string;
-  price: number;
-}
-
-interface FormData {
-  name: string;
-  price: number | null;
-  description: string | null;
-  imageUrl: string | null;
-  categoryId: string;
-  discount: number | null;
-  isHalfHalf: boolean;
-  sizes: SizeInput[];
-}
-
-interface AddProductResult {
-  success: boolean;
-  error?: string;
-}
-
-const addProduct = async (formData: FormData): Promise<AddProductResult> => {
-  // Validação dos dados
-  if (!formData.name.trim()) {
-    return { success: false, error: "O nome do produto é obrigatório." };
-  }
-  if (!formData.categoryId) {
-    return { success: false, error: "A categoria é obrigatória." };
-  }
-
+export const addProduct = async (
+  formData: ProductSchemaType
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    // Verificar se a categoria existe e se é "Pizzas"
     const category = await db.category.findUnique({
       where: { id: formData.categoryId },
     });
+
     if (!category) {
-      return { success: false, error: "Categoria não encontrada." };
+      throw new Error("Categoria não encontrada.");
     }
+
     const isPizzaCategory = category.name.toLowerCase() === "pizzas";
 
-    // Validar preço do produto
-    if (isPizzaCategory) {
-      if (formData.price !== null) {
-        return {
-          success: false,
-          error:
-            "O preço do produto deve ser nulo para pizzas, pois os preços são definidos pelos tamanhos.",
-        };
-      }
-    } else {
-      if (
-        formData.price === null ||
-        isNaN(formData.price) ||
-        formData.price <= 0
-      ) {
-        return {
-          success: false,
-          error: "O preço do produto é obrigatório e deve ser maior que zero.",
-        };
-      }
-    }
-
-    // Validar desconto
-    if (
-      formData.discount !== null &&
-      (isNaN(formData.discount) || formData.discount < 0)
-    ) {
-      return { success: false, error: "Desconto inválido." };
-    }
-
-    // Validar tamanhos para pizzas
-    if (isPizzaCategory) {
-      if (formData.sizes.length === 0) {
-        return {
-          success: false,
-          error: "Pelo menos um tamanho é obrigatório para pizzas.",
-        };
-      }
-      for (const size of formData.sizes) {
-        if (!size.name.trim()) {
-          return { success: false, error: "O nome do tamanho é obrigatório." };
-        }
-        if (isNaN(size.price) || size.price <= 0) {
-          return {
-            success: false,
-            error: "O preço do tamanho deve ser maior que zero.",
-          };
-        }
-      }
-    } else if (formData.sizes.length > 0) {
-      return {
-        success: false,
-        error: "Tamanhos só podem ser fornecidos para a categoria Pizzas.",
-      };
-    }
-
-    // Criar o produto
-    const product = await db.product.create({
+    await db.product.create({
       data: {
         name: formData.name,
-        price: formData.price,
         description: formData.description,
         imageUrl: formData.imageUrl,
-        category: {
-          connect: { id: formData.categoryId },
-        },
-        discount: formData.discount,
+        price: isPizzaCategory ? null : formData.price, // O preço já é number | null
+        discount: formData.discount, // O desconto já é number
         isHalfHalf: formData.isHalfHalf,
+        categoryId: formData.categoryId,
+        Size: {
+          create: isPizzaCategory
+            ? formData.sizes.map((size) => ({
+                name: size.name,
+                price: size.price!, // O preço do tamanho já é number
+              }))
+            : undefined,
+        },
       },
     });
 
-    // Criar tamanhos, se fornecidos
-    if (isPizzaCategory && formData.sizes.length > 0) {
-      await db.size.createMany({
-        data: formData.sizes.map((size) => ({
-          name: size.name,
-          price: size.price,
-          productId: product.id,
-        })),
-      });
-    }
+    revalidatePath("/loja/adicionar-produtos");
+    revalidatePath("/");
 
     return { success: true };
   } catch (error) {
@@ -135,22 +52,24 @@ const addProduct = async (formData: FormData): Promise<AddProductResult> => {
     console.error("Erro ao criar produto:", error);
     return {
       success: false,
-      error: "Erro ao criar o produto. Tente novamente.",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Erro desconhecido ao criar o produto.",
     };
   }
 };
 
-const deleteProduct = async (id: string): Promise<boolean> => {
+export const deleteProduct = async (id: string): Promise<boolean> => {
   try {
     await db.product.update({
       where: { id },
       data: { isActive: false },
     });
+    revalidatePath("/loja/adicionar-produtos");
     return true;
   } catch (error) {
     console.error("Erro ao arquivar produto:", error);
     return false;
   }
 };
-
-export { addProduct, deleteProduct };

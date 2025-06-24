@@ -1,6 +1,6 @@
 import { db } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { ProductClient } from "./_components/ProductClient"; //
+import { ProductClient } from "./components/ProductClient"; //
 import { Prisma } from "@prisma/client";
 
 interface ProductPageProps {

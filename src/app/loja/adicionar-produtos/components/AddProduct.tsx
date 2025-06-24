@@ -1,24 +1,35 @@
 "use client";
 
+import { useState } from "react";
+import { Category } from "@prisma/client";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Trash2, PlusCircle } from "lucide-react";
+import { ZodError } from "zod";
+
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-
-import { useState } from "react";
-import { addProduct } from "../actions/product";
-import { toast } from "sonner";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Category } from "@prisma/client";
-import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
-import { formatBRL, parseBRL } from "@/helpers/currency-format";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { addProduct } from "../actions/product";
+import { formatBRL } from "@/helpers/currency-format";
+import { productSchema } from "@/lib/schemas";
 
 interface AddProductProps {
   categories: Category[];
@@ -29,361 +40,322 @@ interface SizeInput {
   price: string;
 }
 
-const AddProduct = ({ categories }: AddProductProps) => {
-  const [data, setData] = useState({
-    name: "",
-    price: "",
-    description: "",
-    imageUrl: "",
-    categoryId: "",
-    discount: "",
-    isHalfHalf: false,
-  });
-  const [sizes, setSizes] = useState<SizeInput[]>([]);
+type FormErrors = { [key: string]: string | undefined };
+
+export default function AddProduct({ categories }: AddProductProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const router = useRouter();
 
-  const selectedCategory = categories.find((cat) => cat.id === data.categoryId);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [isHalfHalf, setIsHalfHalf] = useState(false);
+  const [price, setPrice] = useState("");
+  const [discount, setDiscount] = useState("0");
+  const [sizes, setSizes] = useState<SizeInput[]>([]);
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  const selectedCategory = categories.find((cat) => cat.id === categoryId);
   const isPizzaCategory = selectedCategory?.name.toLowerCase() === "pizzas";
 
-  const validateForm = () => {
-    const newErrors: { [key: string]: string } = {};
-    if (!data.name.trim()) newErrors.name = "O nome é obrigatório";
-    if (!data.categoryId) newErrors.categoryId = "Selecione uma categoria";
-    if (!isPizzaCategory) {
-      if (!data.price) newErrors.price = "O preço é obrigatório";
-      else if (
-        isNaN(Number(parseBRL(data.price))) ||
-        Number(parseBRL(data.price)) <= 0
-      )
-        newErrors.price = "Preço inválido";
+  const resetForm = () => {
+    setName("");
+    setDescription("");
+    setImageUrl("");
+    setCategoryId("");
+    setIsHalfHalf(false);
+    setPrice("");
+    setDiscount("0");
+    setSizes([]);
+    setErrors({});
+  };
+
+  const applyCurrencyMask = (value: string): string => {
+    const numericValue = value.replace(/\D/g, "");
+    if (numericValue === "") {
+      return "";
     }
-    if (
-      data.discount &&
-      (isNaN(Number(parseBRL(data.discount))) ||
-        Number(parseBRL(data.discount)) < 0)
-    )
-      newErrors.discount = "Desconto inválido";
-    if (isPizzaCategory && sizes.length === 0)
-      newErrors.sizes = "Pelo menos um tamanho é obrigatório para pizzas";
-    sizes.forEach((size, index) => {
-      if (!size.name.trim())
-        newErrors[`sizeName${index}`] = `Nome do tamanho ${
-          index + 1
-        } é obrigatório`;
-      if (!size.price || isNaN(Number(size.price)))
-        newErrors[`sizePrice${index}`] = `Preço do tamanho ${
-          index + 1
-        } é inválido`;
-    });
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return formatBRL(parseFloat(numericValue) / 100);
   };
 
-  const handleMoneyChange = (
-    field: "price" | "discount",
-    value: string,
-    sizeIndex?: number
-  ) => {
-    if (sizeIndex !== undefined) {
-      const newSizes = [...sizes];
-      newSizes[sizeIndex] = { ...newSizes[sizeIndex], price: value };
-      setSizes(newSizes);
-    } else {
-      setData({ ...data, [field]: value });
-    }
-  };
-
-  // Adicionar um novo tamanho
-  const addSize = () => {
-    setSizes([...sizes, { name: "", price: "" }]);
-  };
-
-  // Remover um tamanho
-  const removeSize = (index: number) => {
-    setSizes(sizes.filter((_, i) => i !== index));
-  };
-
-  // Atualizar um tamanho
-  const updateSize = (
+  const addSize = () => setSizes((prev) => [...prev, { name: "", price: "" }]);
+  const removeSize = (index: number) =>
+    setSizes((prev) => prev.filter((_, i) => i !== index));
+  const updateSizeField = (
     index: number,
-    field: "name" | "price",
+    field: keyof SizeInput,
     value: string
   ) => {
     const newSizes = [...sizes];
-    newSizes[index] = { ...newSizes[index], [field]: value };
+
+    newSizes[index][field] =
+      field === "price" ? applyCurrencyMask(value) : value;
     setSizes(newSizes);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const validateAndSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) {
-      toast("Erro de validação", {
-        style: {
-          background: "red",
-          color: "white",
-        },
-        description: "Por favor, corrija os erros no formulário.",
+    setErrors({});
+
+    const formData = {
+      name,
+      description,
+      imageUrl,
+      categoryId,
+      isHalfHalf,
+      price: price,
+      discount: discount || "0",
+      sizes,
+      isPizzaCategory,
+    };
+
+    const validationResult = productSchema.safeParse(formData);
+
+    if (!validationResult.success) {
+      const fieldErrors: FormErrors = {};
+      validationResult.error.errors.forEach((err) => {
+        const path = err.path.join("_");
+        fieldErrors[path] = err.message;
+      });
+      setErrors(fieldErrors);
+      toast.error("Formulário inválido", {
+        description: "Por favor, corrija os campos destacados.",
       });
       return;
     }
 
     setLoading(true);
-    try {
-      const result = await addProduct({
-        name: data.name,
-        price: isPizzaCategory ? null : Number(parseBRL(data.price)),
-        description: data.description || null,
-        imageUrl: data.imageUrl || null,
-        categoryId: data.categoryId,
-        discount: data.discount ? Number(parseBRL(data.discount)) : null,
-        isHalfHalf: data.isHalfHalf,
-        sizes: isPizzaCategory
-          ? sizes.map((size) => ({
-              name: size.name,
-              price: Number(parseBRL(size.price)),
-            }))
-          : [],
-      });
 
-      if (result.success) {
-        toast("Sucesso", {
-          style: {
-            background: "green",
-            color: "white",
-          },
-          description: "Produto adicionado com sucesso!",
-        });
-        setOpen(false); // Fechar o Dialog
-        setData({
-          name: "",
-          price: "",
-          description: "",
-          imageUrl: "",
-          categoryId: "",
-          discount: "",
-          isHalfHalf: false,
-        }); // Resetar o formulário
-        setSizes([]);
-      } else {
-        toast("Erro interno", {
-          description: result.error || "Falha ao adicionar o produto.",
-          style: {
-            background: "red",
-            color: "white",
-          },
-        });
-      }
-    } catch (error) {
-      toast("Erro inesperado", {
-        description: "Ocorreu um erro inesperado. Tente novamente.",
-        style: {
-          background: "red",
-          color: "white",
-        },
-      });
+    const promise = addProduct(validationResult.data);
 
-      console.error("Erro ao adicionar produto:", error);
-    } finally {
-      setLoading(false);
-      router.refresh();
-    }
+    toast.promise(promise, {
+      loading: "Adicionando produto...",
+      success: (result) => {
+        if (!result.success) {
+          throw new Error(result.error);
+        }
+        resetForm();
+        setOpen(false);
+        router.refresh();
+        return "Produto adicionado com sucesso!";
+      },
+      error: (err: ZodError) => {
+        setLoading(false);
+        return err.message || "Falha ao adicionar produto.";
+      },
+      finally: () => {
+        setLoading(false);
+      },
+    });
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        if (!isOpen) resetForm();
+      }}
+    >
       <DialogTrigger asChild>
-        <Button className="cursor-pointer">Adicionar produto</Button>
+        <Button>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Adicionar Produto
+        </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Adicionar um produto à loja</DialogTitle>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3 mt-8">
-            <div>
-              <Input
-                placeholder="Nome"
-                value={data.name}
-                onChange={(e) => setData({ ...data, name: e.target.value })}
-              />
-              {errors.name && (
-                <p className="text-red-500 text-sm">{errors.name}</p>
-              )}
-            </div>
-            <div>
-              <Input
-                type="text"
-                placeholder="Preço (obrigatório)"
-                value={data.price ? formatBRL(parseBRL(data.price)) : ""}
-                onChange={(e) => handleMoneyChange("price", e.target.value)}
-                disabled={isPizzaCategory}
-              />
-              {errors.price && (
-                <p className="text-red-500 text-sm">{errors.price}</p>
-              )}
-            </div>
-            <Input
-              placeholder="Descrição (opcional)"
-              value={data.description}
-              onChange={(e) =>
-                setData({ ...data, description: e.target.value })
-              }
-            />
-            <Input
-              placeholder="URL da imagem (opcional)"
-              type="url"
-              value={data.imageUrl}
-              onChange={(e) => setData({ ...data, imageUrl: e.target.value })}
-            />
-            <div>
-              <Input
-                type="text"
-                placeholder="Desconto (opcional)"
-                value={data.discount ? formatBRL(parseBRL(data.discount)) : ""}
-                onChange={(e) => handleMoneyChange("discount", e.target.value)}
-              />
-              {errors.discount && (
-                <p className="text-red-500 text-sm">{errors.discount}</p>
-              )}
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                checked={data.isHalfHalf}
-                onCheckedChange={(checked) =>
-                  setData({ ...data, isHalfHalf: !!checked })
-                }
-              />
-              <label>Produto meio a meio</label>
-            </div>
-            <div>
-              <select
-                className="w-full p-2 border rounded-md text-sm text-foreground dark:bg-input/30 placeholder:text-muted-foreground"
-                value={data.categoryId}
-                onChange={(e) => {
-                  if (e.target.value !== data.categoryId) {
-                    setData({ ...data, categoryId: e.target.value });
-
-                    const newCategory = categories.find(
-                      (category) => category.id === e.target.value
-                    );
-                    if (newCategory?.name.toLocaleLowerCase() === "pizzas") {
-                      setData({
-                        ...data,
-                        categoryId: e.target.value,
-                        isHalfHalf: true,
-                      });
-                    } else {
-                      setSizes([]);
-                    }
-                  }
-                }}
-              >
-                <option value="">Selecione uma categoria</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-              {/* <Select
-                value={data.categoryId}
-                onValueChange={(value) => {
-                  // Só atualiza se o valor mudou
-                  if (value !== data.categoryId) {
-                    setData({ ...data, categoryId: value });
-                    // Limpa tamanhos apenas se a nova categoria não for "Pizzas"
-                    const newCategory = categories.find(
-                      (cat) => cat.id === value
-                    );
-                    if (newCategory?.name.toLowerCase() !== "pizzas") {
-                      setSizes([]);
-                    }
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select> */}
-              {errors.categoryId && (
-                <p className="text-red-500 text-sm">{errors.categoryId}</p>
-              )}
-            </div>
-
-            {isPizzaCategory && (
-              <div className="flex flex-col gap-3">
-                <div className="flex justify-between items-center">
-                  <label className="font-semibold">Tamanhos</label>
-                  <Button type="button" onClick={addSize} variant="outline">
-                    Adicionar tamanho
-                  </Button>
+          <DialogTitle>Adicionar um novo produto</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={validateAndSubmit}>
+          <ScrollArea className="max-h-[70vh] p-1">
+            <div className="space-y-4 px-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="name">Nome do Produto</Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                  {errors.name && (
+                    <p className="text-destructive text-sm mt-1">
+                      {errors.name}
+                    </p>
+                  )}
                 </div>
-                {sizes.map((size, index) => (
-                  <div key={index} className="flex gap-2 items-center">
-                    <div className="flex-1">
-                      <Input
-                        placeholder={`Nome do tamanho ${index + 1}`}
-                        value={size.name}
-                        onChange={(e) =>
-                          updateSize(index, "name", e.target.value)
-                        }
-                      />
-                      {errors[`sizeName${index}`] && (
-                        <p className="text-red-500 text-sm">
-                          {errors[`sizeName${index}`]}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <Input
-                        type="text"
-                        placeholder={`Preço do tamanho ${index + 1}`}
-                        value={
-                          size.price ? formatBRL(parseBRL(size.price)) : ""
-                        }
-                        onChange={(e) =>
-                          handleMoneyChange("price", e.target.value, index)
-                        }
-                      />
-                      {errors[`sizePrice${index}`] && (
-                        <p className="text-red-500 text-sm">
-                          {errors[`sizePrice${index}`]}
-                        </p>
-                      )}
-                    </div>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      onClick={() => removeSize(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                {errors.sizes && (
-                  <p className="text-red-500 text-sm">{errors.sizes}</p>
+                <div>
+                  <Label htmlFor="categoryId">Categoria</Label>
+                  <Select value={categoryId} onValueChange={setCategoryId}>
+                    <SelectTrigger id="categoryId">
+                      <SelectValue placeholder="Selecione uma categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.categoryId && (
+                    <p className="text-destructive text-sm mt-1">
+                      {errors.categoryId}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="price">Preço Base</Label>
+                  <Input
+                    id="price"
+                    value={price}
+                    onChange={(e) =>
+                      setPrice(applyCurrencyMask(e.target.value))
+                    }
+                    disabled={isPizzaCategory}
+                    placeholder={
+                      isPizzaCategory ? "Definido por tamanho" : "R$ 0,00"
+                    }
+                  />
+                  {errors.price && (
+                    <p className="text-destructive text-sm mt-1">
+                      {errors.price}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="discount">Desconto (%)</Label>
+                  <Input
+                    id="discount"
+                    type="number"
+                    value={discount}
+                    onChange={(e) => setDiscount(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="description">Descrição</Label>
+                <Input
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Ingredientes e detalhes"
+                />
+                {errors.description && (
+                  <p className="text-destructive text-sm mt-1">
+                    {errors.description}
+                  </p>
                 )}
               </div>
-            )}
 
-            <Button type="submit" disabled={loading}>
-              {loading ? "Adicionando..." : "Adicionar"}
+              <div>
+                <Label htmlFor="imageUrl">URL da Imagem (opcional)</Label>
+                <Input
+                  id="imageUrl"
+                  type="url"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://..."
+                />
+                {errors.imageUrl && (
+                  <p className="text-destructive text-sm mt-1">
+                    {errors.imageUrl}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <Checkbox
+                  id="isHalfHalf"
+                  checked={isHalfHalf}
+                  onCheckedChange={(checked) => setIsHalfHalf(!!checked)}
+                />
+                <Label htmlFor="isHalfHalf" className="cursor-pointer">
+                  Permitir meio a meio?
+                </Label>
+              </div>
+
+              {isPizzaCategory && (
+                <div className="space-y-4 pt-2">
+                  <Label className="font-semibold">Tamanhos da Pizza</Label>
+                  {sizes.map((size, index) => (
+                    <div key={index} className="flex items-start gap-2">
+                      <div className="flex-1">
+                        <Input
+                          placeholder={`Nome (Ex: Média)`}
+                          value={size.name}
+                          onChange={(e) =>
+                            updateSizeField(index, "name", e.target.value)
+                          }
+                        />
+                        {errors[`sizes_${index}_name`] && (
+                          <p className="text-destructive text-sm mt-1">
+                            {errors[`sizes_${index}_name`]}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <Input
+                          placeholder="Preço"
+                          value={size.price}
+                          onChange={(e) =>
+                            updateSizeField(index, "price", e.target.value)
+                          }
+                        />
+                        {errors[`sizes_${index}_price`] && (
+                          <p className="text-destructive text-sm mt-1">
+                            {errors[`sizes_${index}_price`]}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => removeSize(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addSize}
+                  >
+                    Adicionar Tamanho
+                  </Button>
+                  {errors.sizes && (
+                    <p className="text-destructive text-sm mt-1">
+                      {errors.sizes}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+          <DialogFooter className="pt-4 mt-4 border-t">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setOpen(false)}
+            >
+              Cancelar
             </Button>
-          </form>
-        </DialogHeader>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Salvando..." : "Salvar Produto"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
-};
-
-export default AddProduct;
+}
