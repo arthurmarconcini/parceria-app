@@ -8,6 +8,7 @@ import {
   ShoppingCart,
   LayoutDashboard,
   PackagePlus,
+  List,
 } from "lucide-react";
 
 import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
@@ -107,11 +108,20 @@ const ProfileMenu = () => {
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link
-                href="/loja/adicionar-produtos"
+                href="/loja/produtos"
                 className="flex items-center gap-2 cursor-pointer"
               >
                 <PackagePlus className="h-4 w-4" />
                 <span>Produtos</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href="/loja/categorias"
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <List className="h-4 w-4" />
+                <span>Categorias</span>
               </Link>
             </DropdownMenuItem>
           </>
