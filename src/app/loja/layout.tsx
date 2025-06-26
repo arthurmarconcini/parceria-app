@@ -9,22 +9,22 @@ export default async function ShopLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth(); // Obter a sessão atual do usuário
+  const session = await auth();
 
   if (
     !session ||
     !session.user ||
     (session.user.role !== "ADMIN" && session.user.role !== "CASHIER")
   ) {
-    redirect("/"); // Redireciona para a página inicial
+    redirect("/");
   }
-  // Se o usuário tiver o perfil correto, o restante do layout e a página filha são renderizados.
+
   return (
     <SidebarProvider defaultOpen={false}>
       <AppSidebar />
 
       <div className="flex-1 flex flex-col md:pl-0">
-        <header className="sticky top-0 bg-background/90 backdrop-blur-sm border-b border-border p-2 md:px-4 flex items-center z-30 h-14 shadow-sm">
+        <header className="sticky top-0 bg-background/90 backdrop-blur-sm border-b border-border p-2 md:px-4 flex items-center z-40 h-14 shadow-sm">
           <SidebarTrigger className="text-foreground hover:bg-accent focus-visible:ring-primary focus-visible:ring-offset-0" />
           <h1 className="ml-3 text-lg font-semibold text-foreground">
             Painel da Loja
