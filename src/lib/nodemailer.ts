@@ -1,8 +1,5 @@
-// lib/nodemailer.ts
-
 import nodemailer from "nodemailer";
 
-// Assegura que as variáveis de ambiente não são nulas
 const email = process.env.EMAIL_SERVER_USER!;
 const pass = process.env.EMAIL_SERVER_PASSWORD!;
 

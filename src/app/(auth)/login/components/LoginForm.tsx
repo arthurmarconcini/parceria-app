@@ -1,4 +1,3 @@
-// src/app/(auth)/login/_components/LoginForm.tsx
 "use client";
 
 import { useState } from "react";
@@ -32,7 +31,6 @@ export default function LoginForm() {
   };
 
   return (
-    // O componente do Modal ficará fora da tag <form>
     <div>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-4">
@@ -71,9 +69,6 @@ export default function LoginForm() {
         </div>
       </form>
 
-      {/* CORREÇÃO: Movido o Dialog para fora do formulário.
-        Agora ele gerencia seu próprio estado e submissão sem interferir no login.
-      */}
       <div className="text-center mt-4">
         <ForgotPasswordDialog />
       </div>

@@ -1,4 +1,3 @@
-// src/app/(auth)/login/_components/ForgotPasswordDialog.tsx
 "use client";
 
 import { useState, useTransition } from "react";

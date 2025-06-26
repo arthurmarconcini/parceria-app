@@ -1,5 +1,3 @@
-// src/app/reset-password/[token]/page.tsx
-
 "use client";
 
 import { useTransition } from "react";
@@ -19,7 +17,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { resetPasswordAction } from "@/app/(auth)/actions"; // Atualize o caminho se necessário
+import { resetPasswordAction } from "@/app/(auth)/actions";
 
 const resetSchema = z
   .object({

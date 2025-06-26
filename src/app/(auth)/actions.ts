@@ -1,16 +1,13 @@
-// src/app/(auth)/actions.ts
-
 "use server";
 
 import { z } from "zod";
 import { nanoid } from "nanoid";
 import bcrypt from "bcrypt";
 import { db } from "@/lib/prisma";
-import { transporter } from "@/lib/nodemailer"; // Assumindo que você criou este arquivo
+import { transporter } from "@/lib/nodemailer";
 import { signIn } from "@/auth";
 import { AuthError } from "next-auth";
 
-// --- Ação de Login (movida para cá para centralizar) ---
 export async function loginAction(credentials: {
   email: string;
   password: string;
@@ -38,7 +35,6 @@ export async function loginAction(credentials: {
   }
 }
 
-// --- Nova Ação: Solicitar Redefinição de Senha ---
 export async function requestPasswordResetAction(email: string) {
   if (!email) {
     return { success: false, error: "O campo de e-mail é obrigatório." };
@@ -46,23 +42,18 @@ export async function requestPasswordResetAction(email: string) {
 
   const user = await db.user.findUnique({ where: { email } });
 
-  // CORREÇÃO: Verifica se o usuário existe ANTES de prosseguir.
   if (!user) {
-    // Retorna um erro se o e-mail não for encontrado.
     return {
       success: false,
       error: "Nenhum usuário encontrado com este e-mail.",
     };
   }
 
-  // Gera um token único e seguro com nanoid
   const token = nanoid();
   const expires = new Date(new Date().getTime() + 3600 * 1000); // Expira em 1 hora
 
-  // Invalida tokens antigos para o mesmo e-mail
   await db.passwordResetToken.deleteMany({ where: { email } });
 
-  // Salva o novo token no banco
   await db.passwordResetToken.create({
     data: {
       email,
@@ -74,6 +65,8 @@ export async function requestPasswordResetAction(email: string) {
   const resetLink = `${process.env.NEXT_PUBLIC_BASE_URL}/reset-password/${token}`;
 
   try {
+    console.log("Link de redefinição gerado:", resetLink);
+
     await transporter.sendMail({
       from: process.env.EMAIL_FROM,
       to: email,
@@ -87,7 +80,7 @@ export async function requestPasswordResetAction(email: string) {
         <p>Se você não solicitou isso, por favor ignore este e-mail.</p>
       `,
     });
-    // Se o e-mail foi enviado com sucesso, retorna sucesso.
+
     return { success: true };
   } catch (error) {
     console.error("Erro ao enviar e-mail de redefinição:", error);
@@ -95,7 +88,6 @@ export async function requestPasswordResetAction(email: string) {
   }
 }
 
-// --- Nova Ação: Redefinir a Senha ---
 const resetPasswordSchema = z
   .object({
     password: z.string().min(6, "A senha deve ter no mínimo 6 caracteres."),
