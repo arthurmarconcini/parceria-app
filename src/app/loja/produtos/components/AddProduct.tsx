@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Category } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trash2, PlusCircle } from "lucide-react";
+import { Trash2, PlusCircle, UploadCloud } from "lucide-react";
 import { ZodError } from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { addProduct } from "../actions/product";
 import { formatBRL } from "@/helpers/currency-format";
 import { productSchema } from "@/lib/schemas";
+import Image from "next/image";
 
 interface AddProductProps {
   categories: Category[];
@@ -42,7 +43,9 @@ export default function AddProduct({ categories }: AddProductProps) {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   const [categoryId, setCategoryId] = useState("");
   const [isHalfHalf, setIsHalfHalf] = useState(false);
   const [price, setPrice] = useState("");
@@ -57,6 +60,7 @@ export default function AddProduct({ categories }: AddProductProps) {
     setName("");
     setDescription("");
     setImageUrl("");
+    setImageFile(null);
     setCategoryId("");
     setIsHalfHalf(false);
     setPrice("");
@@ -86,6 +90,56 @@ export default function AddProduct({ categories }: AddProductProps) {
     newSizes[index][field] =
       field === "price" ? applyCurrencyMask(value) : value;
     setSizes(newSizes);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImageFile(file);
+    setIsUploading(true);
+    toast.info("Enviando imagem...");
+
+    try {
+      // 1. Obter a URL pré-assinada da nossa API
+      const presignedUrlResponse = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename: file.name,
+          contentType: file.type,
+        }),
+      });
+
+      if (!presignedUrlResponse.ok) {
+        throw new Error("Falha ao obter URL para upload.");
+      }
+
+      const { url, publicUrl } = await presignedUrlResponse.json();
+
+      // 2. Enviar o arquivo para a URL pré-assinada do S3
+      const uploadResponse = await fetch(url, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error("Falha ao enviar imagem para o S3.");
+      }
+
+      // 3. Salvar a URL pública final no estado
+      setImageUrl(publicUrl);
+      toast.success("Imagem enviada com sucesso!");
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error instanceof Error ? error.message : "Erro no upload da imagem."
+      );
+      setImageFile(null); // Limpa o arquivo se der erro
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const validateAndSubmit = async (e: React.FormEvent) => {
@@ -336,6 +390,45 @@ export default function AddProduct({ categories }: AddProductProps) {
                     </p>
                   )}
                 </div>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="image-upload">Imagem do Produto</Label>
+              <div className="flex items-center gap-4">
+                <label htmlFor="image-upload" className="flex-1 cursor-pointer">
+                  <div className="flex h-20 w-full items-center justify-center rounded-md border-2 border-dashed border-input p-4 text-center text-muted-foreground hover:border-primary">
+                    {imageFile ? (
+                      <p className="truncate">{imageFile.name}</p>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1">
+                        <UploadCloud className="h-6 w-6" />
+                        <span>Clique para selecionar</span>
+                      </div>
+                    )}
+                  </div>
+                </label>
+                <Input
+                  id="image-upload"
+                  type="file"
+                  className="sr-only"
+                  onChange={handleFileChange}
+                  accept="image/png, image/jpeg, image/webp"
+                  disabled={isUploading}
+                />
+                {imageUrl && (
+                  <Image
+                    src={imageUrl}
+                    alt="Previa da imagem"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    width={60}
+                    height={60}
+                  />
+                )}
+              </div>
+              {errors.imageUrl && (
+                <p className="text-destructive text-sm mt-1">
+                  {errors.imageUrl}
+                </p>
               )}
             </div>
           </ScrollArea>

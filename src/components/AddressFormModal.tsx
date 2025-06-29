@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 // Importe a nova action
 import { toast } from "sonner";
 import { Locality } from "@prisma/client";
-import { createAddressAction } from "@/app/actions/AddressActions";
+import { createAddressAction } from "@/actions/AddressActions";
 import AddressForm from "@/app/checkout/components/AddressForm";
 
 // Props para carregar dados necessários para o formulário

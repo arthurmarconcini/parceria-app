@@ -4,7 +4,7 @@ import { Locality, RestaurantCity } from "@prisma/client";
 import { AddressList } from "./AddressList";
 import { AddressFormModal } from "./AddressFormModal";
 import { useState } from "react";
-import { createAddressAction } from "@/app/actions/AddressActions";
+import { createAddressAction } from "@/actions/AddressActions";
 import { toast } from "sonner";
 import { AddressWithLocality } from "./ProfileClient";
 

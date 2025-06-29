@@ -13,7 +13,7 @@ import { PlusCircle, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { RestaurantCity } from "@prisma/client";
-import { createAddressAction } from "@/app/actions/AddressActions";
+import { createAddressAction } from "@/actions/AddressActions";
 import AddressForm from "./AddressForm";
 import { AddressWithLocality, LocalityWithCity } from "./CheckoutClient";
 
