@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   PackagePlus,
   List,
+  Clock,
 } from "lucide-react";
 
 import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
@@ -122,6 +123,15 @@ const ProfileMenu = () => {
               >
                 <List className="h-4 w-4" />
                 <span>Categorias</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href="/loja/horarios"
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <Clock className="h-4 w-4" />
+                <span>Horários</span>
               </Link>
             </DropdownMenuItem>
           </>

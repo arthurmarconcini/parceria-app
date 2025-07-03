@@ -1,27 +1,30 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
-
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Monitor, Barcode, List, Clock } from "lucide-react";
 
-const itens = [
+// Definição dos itens do menu para facilitar a manutenção
+const menuItems = [
   {
-    title: "Gestor de pedidos",
+    title: "Gestor de Pedidos",
     url: "/loja/gestor",
     icon: Monitor,
   },
   {
     title: "Produtos",
-    url: "/loja/adicionar-produtos",
+    url: "/loja/produtos",
     icon: Barcode,
   },
   {
@@ -37,32 +40,81 @@ const itens = [
 ];
 
 const AppSidebar = () => {
+  const pathname = usePathname();
+  const { data: session } = useSession();
+  const { state } = useSidebar(); // Hook para obter o estado da sidebar
+
+  const getAvatarFallback = (name?: string | null) => {
+    if (!name) return "AD";
+    const parts = name.split(" ");
+    return parts.length > 1
+      ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+      : name.substring(0, 2).toUpperCase();
+  };
+
   return (
-    <Sidebar>
-      <SidebarHeader className="bg-secondary">
-        <h1>Bem vindo ao gestor do parcerias</h1>
+    <Sidebar collapsible="icon">
+      {/* O cabeçalho agora centraliza os itens quando está colapsado */}
+      <SidebarHeader
+        className={`flex items-center p-2 transition-all duration-300 ${
+          state === "collapsed"
+            ? "justify-center h-[58px]"
+            : "justify-start h-auto"
+        }`}
+      >
+        <Avatar className="h-9 w-9">
+          <AvatarImage src="/avatar.png" alt="Avatar do usuário" />
+          <AvatarFallback>
+            {getAvatarFallback(session?.user?.name)}
+          </AvatarFallback>
+        </Avatar>
+        {/* Contêiner para o nome e cargo que some suavemente */}
+        <div
+          className={`ml-2 flex flex-col transition-opacity duration-200 ${
+            state === "collapsed" ? "opacity-0 h-0 w-0" : "opacity-100"
+          }`}
+        >
+          <span className="text-sm font-semibold text-sidebar-foreground truncate">
+            {session?.user?.name || "Admin"}
+          </span>
+          <span className="text-xs text-muted-foreground capitalize">
+            {session?.user?.role?.toLowerCase() || ""}
+          </span>
+        </div>
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Pedidos</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {itens.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <a href={`http://localhost:3000${item.url}`}>
-                      <item.icon size={20} />
-                      <span>{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        <SidebarGroup />
+
+      <SidebarContent className="p-2">
+        <SidebarMenu>
+          {menuItems.map((item) => (
+            <SidebarMenuItem key={item.title}>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === item.url}
+                tooltip={{
+                  children: item.title,
+                  side: "right",
+                  align: "center",
+                }}
+              >
+                <a href={item.url}>
+                  <item.icon size={20} />
+                  <span>{item.title}</span>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter />
+
+      <SidebarFooter className="p-4 border-t border-sidebar-border">
+        <p
+          className={`text-xs text-muted-foreground transition-opacity duration-200 ${
+            state === "collapsed" ? "opacity-0" : "opacity-100"
+          }`}
+        >
+          © {new Date().getFullYear()} Parceria App
+        </p>
+      </SidebarFooter>
     </Sidebar>
   );
 };

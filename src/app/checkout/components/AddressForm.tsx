@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface Locality {
   id: string;
@@ -59,61 +59,81 @@ export default function AddressForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
 
-  const handleZipCodeChange = async (zipCode: string) => {
+  const handleZipCodeChange = (zipCode: string) => {
     setFormState((prev) => ({ ...prev, zipCode, error: null }));
+  };
 
-    if (!zipCode || !isValidBrazilianZipCode(zipCode)) {
+  useEffect(() => {
+    if (!formState.zipCode || !isValidBrazilianZipCode(formState.zipCode)) {
       return;
     }
 
-    try {
-      const cleanedZipCode = zipCode.replace(/\D/g, "");
-      const response = await fetch(
-        `https://viacep.com.br/ws/${cleanedZipCode}/json/`
-      );
-      const data = await response.json();
+    const controller = new AbortController();
+    const { signal } = controller;
 
-      if (data.erro) {
+    const fetchAddress = async () => {
+      try {
+        const cleanedZipCode = formState.zipCode.replace(/\D/g, "");
+        const response = await fetch(
+          `https://viacep.com.br/ws/${cleanedZipCode}/json/`,
+          { signal }
+        );
+        const data = await response.json();
+
+        if (signal.aborted) {
+          return;
+        }
+
+        if (data.erro) {
+          setFormState((prev) => ({
+            ...prev,
+            error: "CEP não encontrado.",
+            street: "",
+            localityId: "",
+          }));
+          return;
+        }
+
+        if (data.localidade !== restaurantCity.name) {
+          setFormState((prev) => ({
+            ...prev,
+            error: `Entregas são permitidas apenas em ${restaurantCity.name}.`,
+            street: "",
+            localityId: "",
+          }));
+          return;
+        }
+
+        const matchingLocality = localities.find(
+          (locality) =>
+            locality.name.toLowerCase() === data.bairro.toLowerCase()
+        );
+
         setFormState((prev) => ({
           ...prev,
-          error: "CEP não encontrado.",
-          street: "",
-          localityId: "",
+          street: data.logradouro || "",
+          localityId: matchingLocality?.id || "",
+          error: matchingLocality
+            ? null
+            : "Bairro não atendido pelo restaurante.",
         }));
-        return;
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") {
+          console.error("Erro ao consultar o CEP:", error);
+          setFormState((prev) => ({
+            ...prev,
+            error: "Erro ao consultar o CEP. Tente novamente.",
+          }));
+        }
       }
+    };
 
-      if (data.localidade !== restaurantCity.name) {
-        setFormState((prev) => ({
-          ...prev,
-          error: `Entregas são permitidas apenas em ${restaurantCity.name}.`,
-          street: "",
-          localityId: "",
-        }));
-        return;
-      }
+    fetchAddress();
 
-      const matchingLocality = localities.find(
-        (locality) => locality.name.toLowerCase() === data.bairro.toLowerCase()
-      );
-
-      setFormState((prev) => ({
-        ...prev,
-        street: data.logradouro || "",
-        localityId: matchingLocality?.id || "",
-        error: matchingLocality
-          ? null
-          : "Bairro não atendido pelo restaurante.",
-      }));
-    } catch (error) {
-      console.error("Erro ao consultar o CEP:", error);
-      setFormState((prev) => ({
-        ...prev,
-        error: "Erro ao consultar o CEP. Tente novamente.",
-      }));
-    }
-  };
-
+    return () => {
+      controller.abort();
+    };
+  }, [formState.zipCode, localities, restaurantCity.name]);
   const handleSave = async () => {
     if (isSubmitting) return;
 
@@ -126,7 +146,7 @@ export default function AddressForm({
     formData.append("localityId", formState.localityId);
     formData.append("reference", formState.reference);
     formData.append("observation", formState.observation);
-    // Campos fixos
+
     formData.append("city", restaurantCity.name);
     formData.append("state", restaurantState);
 

@@ -151,7 +151,7 @@ const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
                 {displayName || "Cliente não identificado"}
               </p>
               <p>
-                <strong className="text-foreground">Telefone:</strong>
+                <strong className="text-foreground">Telefone:</strong>{" "}
                 {displayPhone || "(Não disponível)"}
               </p>
               {pedido.isDelivery && pedido.address ? (
@@ -160,7 +160,8 @@ const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
                     Endereço de Entrega
                   </h3>
                   <p>
-                    {pedido.address.street}, {pedido.address.number}
+                    <strong>Rua:</strong> {pedido.address.street},{" "}
+                    {pedido.address.number}
                   </p>
                   {pedido.address.reference && (
                     <p>
