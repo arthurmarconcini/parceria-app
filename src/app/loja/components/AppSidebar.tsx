@@ -11,7 +11,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
-import { Monitor, Barcode, List } from "lucide-react";
+import { Monitor, Barcode, List, Clock } from "lucide-react";
 
 const itens = [
   {
@@ -28,6 +28,11 @@ const itens = [
     title: "Categorias",
     url: "/loja/categorias",
     icon: List,
+  },
+  {
+    title: "Horários",
+    url: "/loja/horarios",
+    icon: Clock,
   },
 ];
 

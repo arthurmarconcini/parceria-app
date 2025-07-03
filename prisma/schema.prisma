@@ -256,3 +256,17 @@ model OrderExtra {
   orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
   extra     Extra     @relation(fields: [extraId], references: [id])
 }
+
+model OperatingHours {
+  id        String  @id @default(cuid())
+  dayOfWeek Int     @unique // 0 para Domingo, 1 para Segunda, ..., 6 para Sábado
+  isOpen    Boolean @default(false)
+  openTime  String? // Armazenado como "HH:mm"
+  closeTime String? // Armazenado como "HH:mm"
+}
+
+model StoreSettings {
+  id                  String   @id @default(cuid())
+  isTemporarilyClosed Boolean  @default(false)
+  updatedAt           DateTime @updatedAt
+}

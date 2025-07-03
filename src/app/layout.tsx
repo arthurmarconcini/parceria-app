@@ -6,6 +6,7 @@ import AuthProvider from "../providers/AuthProvider";
 import Header from "@/components/layout/Header";
 import { Toaster } from "@/components/ui/sonner";
 import { auth } from "@/auth";
+import { StoreStatusBanner } from "@/components/StoreStatusBanner";
 
 const roboto = Roboto({
   subsets: ["latin"],
@@ -29,6 +30,7 @@ export default async function RootLayout({
       <body className={`${roboto.className} antialiased`}>
         <AuthProvider session={session}>
           <Header />
+          <StoreStatusBanner />
           {children}
           <Toaster />
         </AuthProvider>
