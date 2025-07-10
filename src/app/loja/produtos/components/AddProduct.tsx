@@ -37,6 +37,11 @@ interface SizeInput {
   price: string;
 }
 
+interface ExtraInput {
+  name: string;
+  price: string;
+}
+
 type FormErrors = { [key: string]: string | undefined };
 
 export default function AddProduct({ categories }: AddProductProps) {
@@ -53,6 +58,7 @@ export default function AddProduct({ categories }: AddProductProps) {
   const [price, setPrice] = useState("");
   const [discount, setDiscount] = useState("0");
   const [sizes, setSizes] = useState<SizeInput[]>([]);
+  const [extras, setExtras] = useState<ExtraInput[]>([]);
   const [errors, setErrors] = useState<FormErrors>({});
 
   const selectedCategory = categories.find((cat) => cat.id === categoryId);
@@ -67,6 +73,7 @@ export default function AddProduct({ categories }: AddProductProps) {
     setPrice("");
     setDiscount("0");
     setSizes([]);
+    setExtras([]);
     setErrors({});
   };
 
@@ -88,6 +95,21 @@ export default function AddProduct({ categories }: AddProductProps) {
     newSizes[index][field] =
       field === "price" ? applyCurrencyMask(value) : value;
     setSizes(newSizes);
+  };
+
+  const addExtra = () =>
+    setExtras((prev) => [...prev, { name: "", price: "" }]);
+  const removeExtra = (index: number) =>
+    setExtras((prev) => prev.filter((_, i) => i !== index));
+  const updateExtraField = (
+    index: number,
+    field: keyof ExtraInput,
+    value: string
+  ) => {
+    const newExtras = [...extras];
+    newExtras[index][field] =
+      field === "price" ? applyCurrencyMask(value) : value;
+    setExtras(newExtras);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -143,6 +165,7 @@ export default function AddProduct({ categories }: AddProductProps) {
       price: price,
       discount: discount || "0",
       sizes,
+      extras,
       isPizzaCategory,
     };
 
@@ -432,6 +455,72 @@ export default function AddProduct({ categories }: AddProductProps) {
                 </CardContent>
               </Card>
             )}
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Extras do Produto</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 pt-4">
+                <div className="space-y-3">
+                  {extras.map((extra, index) => (
+                    <div key={index} className="flex items-end gap-2">
+                      <div className="flex-1 space-y-1.5">
+                        <Label htmlFor={`extra-name-${index}`}>
+                          Nome do Extra
+                        </Label>
+                        <Input
+                          id={`extra-name-${index}`}
+                          placeholder="Ex: Bacon"
+                          value={extra.name}
+                          onChange={(e) =>
+                            updateExtraField(index, "name", e.target.value)
+                          }
+                        />
+                        {errors[`extras_${index}_name`] && (
+                          <p className="text-destructive text-sm mt-1">
+                            {errors[`extras_${index}_name`]}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-1.5">
+                        <Label htmlFor={`extra-price-${index}`}>Preço</Label>
+                        <Input
+                          id={`extra-price-${index}`}
+                          placeholder="R$ 0,00"
+                          value={extra.price}
+                          onChange={(e) =>
+                            updateExtraField(index, "price", e.target.value)
+                          }
+                        />
+                        {errors[`extras_${index}_price`] && (
+                          <p className="text-destructive text-sm mt-1">
+                            {errors[`extras_${index}_price`]}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => removeExtra(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addExtra}
+                  className="mt-4"
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Adicionar Extra
+                </Button>
+              </CardContent>
+            </Card>
           </div>
 
           <DialogFooter className="pt-6 mt-4 border-t">

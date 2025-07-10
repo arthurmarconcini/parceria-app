@@ -24,17 +24,23 @@ export const addProduct = async (
         name: formData.name,
         description: formData.description,
         imageUrl: formData.imageUrl,
-        price: isPizzaCategory ? null : formData.price, // O preço já é number | null
-        discount: formData.discount, // O desconto já é number
+        price: isPizzaCategory ? null : formData.price,
+        discount: formData.discount,
         isHalfHalf: formData.isHalfHalf,
         categoryId: formData.categoryId,
         Size: {
           create: isPizzaCategory
             ? formData.sizes.map((size) => ({
                 name: size.name,
-                price: size.price!, // O preço do tamanho já é number
+                price: size.price!,
               }))
             : undefined,
+        },
+        Extras: {
+          create: formData.extras.map((extra) => ({
+            name: extra.name,
+            price: extra.price!,
+          })),
         },
       },
     });

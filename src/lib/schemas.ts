@@ -10,14 +10,14 @@ export const registerFormSchema = z
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "As senhas não coincidem.",
-    path: ["confirmPassword"], // O erro será exibido no campo de confirmação
+    path: ["confirmPassword"],
   });
 
 export type RegisterFormValues = z.infer<typeof registerFormSchema>;
 
 const aBRLStringToNumber = z.preprocess((val) => {
   if (typeof val !== "string" || val === "") return null;
-  // Remove "R$", pontos de milhar e substitui a vírgula decimal por ponto
+
   const cleaned = val.replace(/[R$\s.]/g, "").replace(",", ".");
   const numberVal = parseFloat(cleaned);
   return isNaN(numberVal) ? null : numberVal;
@@ -31,7 +31,6 @@ export const productSchema = z
     categoryId: z.string().min(1, "A categoria é obrigatória."),
     isHalfHalf: z.boolean().default(false),
 
-    // Validação para o preço e o desconto
     price: aBRLStringToNumber,
     discount: aBRLStringToNumber.default(0),
 
@@ -44,7 +43,15 @@ export const productSchema = z
       })
     ),
 
-    // Campo auxiliar para a lógica condicional
+    extras: z.array(
+      z.object({
+        name: z.string().min(1, "O nome do extra é obrigatório."),
+        price: aBRLStringToNumber.refine((val) => val !== null && val >= 0, {
+          message: "Preço do extra é obrigatório.",
+        }),
+      })
+    ),
+
     isPizzaCategory: z.boolean(),
   })
   .superRefine((data, ctx) => {
