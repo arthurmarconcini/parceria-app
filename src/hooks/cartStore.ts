@@ -27,8 +27,15 @@ export type CartItem = {
   orderExtras: Extra[];
 };
 
+type ShippingInfo = {
+  type: "address" | "cep";
+  value: string; // addressId ou CEP
+};
+
 type CartState = {
   cart: CartItem[];
+  deliveryFee: number;
+  shippingInfo: ShippingInfo | null;
   addToCart: (item: Omit<CartItem, "cartItemId">) => void;
   clearCart: () => void;
   isCartOpen: boolean;
@@ -37,6 +44,7 @@ type CartState = {
   increaseQuantity: (cartItemId: string) => void;
   removeFromCart: (cartItemId: string) => void;
   getTotalPrice: () => number;
+  setDeliveryFee: (fee: number, shippingInfo: ShippingInfo | null) => void;
 };
 
 const generateUniqueId = () =>
@@ -69,6 +77,8 @@ export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       cart: [],
+      deliveryFee: 0,
+      shippingInfo: null,
       addToCart: (item: Omit<CartItem, "cartItemId">) =>
         set((state) => {
           const existingItem = state.cart.find((cartItem) => {
@@ -112,7 +122,13 @@ export const useCartStore = create<CartState>()(
             isCartOpen: true,
           };
         }),
-      clearCart: () => set({ cart: [], isCartOpen: false }),
+      clearCart: () =>
+        set({
+          cart: [],
+          isCartOpen: false,
+          deliveryFee: 0,
+          shippingInfo: null,
+        }),
       isCartOpen: false,
       toggleCart: () => set((state) => ({ isCartOpen: !state.isCartOpen })),
       decreaseQuantity: (cartItemId: string) =>
@@ -146,6 +162,8 @@ export const useCartStore = create<CartState>()(
           return total + (item.priceAtTime + extrasTotal) * item.quantity;
         }, 0);
       },
+      setDeliveryFee: (fee: number, shippingInfo: ShippingInfo | null) =>
+        set({ deliveryFee: fee, shippingInfo }),
     }),
     {
       name: "cart-storage",

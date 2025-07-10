@@ -14,19 +14,122 @@ import { ScrollArea, ScrollBar } from "../ui/scroll-area";
 import currencyFormat from "@/helpers/currency-format";
 import { ShoppingCartIcon, Trash2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useEffect, useState, useCallback } from "react";
+import { Input } from "../ui/input";
+
+import { Locality, Address } from "@prisma/client";
+import { toast } from "sonner";
+
+type AddressWithLocality = Address & { locality: Locality | null };
 
 const Cart = () => {
-  const { cart, clearCart, isCartOpen, toggleCart, getTotalPrice } =
-    useCartStore();
-
+  const {
+    cart,
+    clearCart,
+    isCartOpen,
+    toggleCart,
+    getTotalPrice,
+    deliveryFee,
+    shippingInfo,
+    setDeliveryFee,
+  } = useCartStore();
+  const { data: session } = useSession();
   const router = useRouter();
+  const [cep, setCep] = useState("");
+  const [localities, setLocalities] = useState<Locality[]>([]);
+
+  useEffect(() => {
+    const fetchLocalities = async () => {
+      try {
+        const response = await fetch("/api/localities");
+        const data = await response.json();
+        setLocalities(data);
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Erro ao carregar áreas de entrega."
+        );
+      }
+    };
+    fetchLocalities();
+  }, []);
+
+  const calculateDeliveryFee = useCallback(
+    (bairro: string, id: string, type: "address" | "cep") => {
+      const locality = localities.find(
+        (loc) => loc.name.toLowerCase() === bairro.toLowerCase()
+      );
+
+      if (locality) {
+        setDeliveryFee(locality.deliveryFee, { type, value: id });
+      } else {
+        setDeliveryFee(0, null);
+        toast.error("Não entregamos na sua região.");
+      }
+    },
+    [localities, setDeliveryFee]
+  );
+
+  useEffect(() => {
+    const handleShipping = async () => {
+      if (session?.user) {
+        try {
+          const res = await fetch("/api/user/address");
+          if (!res.ok) {
+            setDeliveryFee(0, null);
+            return;
+          }
+          const { address }: { address: AddressWithLocality } =
+            await res.json();
+          if (address?.locality) {
+            calculateDeliveryFee(address.locality.name, address.id, "address");
+          }
+        } catch (error) {
+          toast.error(
+            error instanceof Error ? error.message : "Erro ao obter endereço."
+          );
+          setDeliveryFee(0, null);
+        }
+      } else {
+        const cepDigits = cep.replace(/\D/g, "");
+        if (cepDigits.length === 8) {
+          try {
+            const res = await fetch(
+              `https://viacep.com.br/ws/${cepDigits}/json/`
+            );
+            const addressData = await res.json();
+            if (addressData.erro) {
+              setDeliveryFee(0, null);
+              toast.error("CEP não encontrado.");
+              return;
+            }
+            calculateDeliveryFee(addressData.bairro, cep, "cep");
+          } catch (error) {
+            setDeliveryFee(0, null);
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : "Erro ao consultar o CEP."
+            );
+          }
+        } else {
+          setDeliveryFee(0, null);
+        }
+      }
+    };
+
+    handleShipping();
+  }, [session, cep, localities, calculateDeliveryFee, setDeliveryFee]);
 
   function handleCheckout() {
     toggleCart();
-
     router.push("/checkout");
   }
 
+  const subtotal = getTotalPrice();
+  const total = subtotal + deliveryFee;
   const totalItemsInCart = cart.reduce(
     (total, item) => total + item.quantity,
     0
@@ -92,7 +195,7 @@ const Cart = () => {
               <ScrollArea className="h-full">
                 <div className="flex flex-col gap-4 p-4">
                   {cart.map((item) => (
-                    <CartItem key={item.cartItemId} item={item} /> //
+                    <CartItem key={item.cartItemId} item={item} />
                   ))}
                 </div>
                 <ScrollBar orientation="vertical" />
@@ -107,23 +210,58 @@ const Cart = () => {
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between text-muted-foreground">
                     <span>Subtotal</span>
-                    <span>{currencyFormat(getTotalPrice())}</span>
+                    <span>{currencyFormat(subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>Taxa de entrega</span>
-                    <span className="font-medium text-green-600">Grátis</span>
+                    <span>
+                      {shippingInfo
+                        ? deliveryFee > 0
+                          ? currencyFormat(deliveryFee)
+                          : "Grátis"
+                        : "Informe o CEP"}
+                    </span>
                   </div>
                   <div className="mt-2 flex justify-between border-t pt-2 text-base font-bold text-foreground">
                     <span>Total</span>
-                    <span>{currencyFormat(getTotalPrice())}</span>
+                    <span>{currencyFormat(total)}</span>
                   </div>
                 </div>
               </div>
+
+              {session?.user ? (
+                <div className="text-center text-xs text-muted-foreground">
+                  <span>Entrega no seu endereço padrão.</span>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Input
+                    type="text"
+                    placeholder="Digite seu CEP para entrega"
+                    value={cep}
+                    onChange={(e) => setCep(e.target.value)}
+                  />
+                  <p className="text-xs text-center text-muted-foreground">
+                    Já tem uma conta?{" "}
+                    <Button
+                      variant="link"
+                      className="p-0 h-auto"
+                      onClick={() => router.push("/login")}
+                    >
+                      Faça login
+                    </Button>
+                  </p>
+                </div>
+              )}
+
               <Button
                 onClick={handleCheckout}
                 className="w-full"
                 size="lg"
-                disabled={cart.length === 0}
+                disabled={
+                  cart.length === 0 ||
+                  (!shippingInfo && session?.user === undefined)
+                }
               >
                 Finalizar Compra
               </Button>
