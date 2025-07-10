@@ -3,210 +3,283 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  // Limpar o banco de dados antes de popular (opcional)
-  await prisma.orderItem.deleteMany();
-  await prisma.order.deleteMany();
+  // Limpar dados existentes para evitar duplicatas, respeitando a ordem das dependências
+  console.log("Iniciando a limpeza do banco de dados...");
+  await prisma.orderExtra.deleteMany();
   await prisma.extra.deleteMany();
   await prisma.size.deleteMany();
   await prisma.product.deleteMany();
   await prisma.category.deleteMany();
+  console.log("Limpeza concluída.");
 
-  // Criar categorias
-  const pizzaCategory = await prisma.category.create({
-    data: { name: "Pizzas" },
-  });
+  // --- CRIAÇÃO DAS CATEGORIAS ---
+  console.log("Criando categorias...");
   const burgerCategory = await prisma.category.create({
     data: { name: "Hambúrgueres" },
   });
+
+  const pizzaCategory = await prisma.category.create({
+    data: { name: "Pizzas" },
+  });
+
+  const dishCategory = await prisma.category.create({
+    data: { name: "Pratos" },
+  });
+
   const drinkCategory = await prisma.category.create({
     data: { name: "Bebidas" },
   });
+  console.log("Categorias criadas com sucesso!");
 
-  // Pizzas com tamanhos P, M, G
-  const pizzas = [
+  // --- CRIAÇÃO DOS PRODUTOS E ADICIONAIS ---
+  console.log("Criando produtos e adicionais...");
+
+  // --- Hambúrgueres ---
+  const burgersData = [
     {
-      name: "Pizza de Calabresa",
-      categoryId: pizzaCategory.id,
-      isHalfHalf: true,
-      sizes: [
-        { name: "P", price: 35.0 },
-        { name: "M", price: 45.0 },
-        { name: "G", price: 55.0 },
-      ],
+      name: "Parceria Clássico",
+      description:
+        "A combinação perfeita de pão brioche, nosso suculento blend de 120g, queijo prato derretido e um toque do nosso molho secreto. O clássico que nunca erra!",
+      price: 28.9,
     },
     {
-      name: "Pizza Margherita",
-      categoryId: pizzaCategory.id,
-      isHalfHalf: true,
-      sizes: [
-        { name: "P", price: 33.0 },
-        { name: "M", price: 43.0 },
-        { name: "G", price: 53.0 },
-      ],
+      name: "Salada Burger",
+      description:
+        "Leveza e sabor se encontram aqui! Blend de 120g, queijo, alface fresquinha, tomate em rodelas e nossa maionese verde artesanal no pão de brioche.",
+      price: 30.9,
     },
     {
-      name: "Pizza Quatro Queijos",
-      categoryId: pizzaCategory.id,
-      isHalfHalf: true,
-      sizes: [
-        { name: "P", price: 38.0 },
-        { name: "M", price: 48.0 },
-        { name: "G", price: 58.0 },
-      ],
+      name: "Bacon Burger",
+      description:
+        "Para os amantes de bacon! Fatias crocantes de bacon sobre um blend de 120g, queijo cheddar cremoso e pão macio. Uma explosão de sabor defumado.",
+      price: 32.9,
     },
     {
-      name: "Pizza Pepperoni",
-      categoryId: pizzaCategory.id,
-      isHalfHalf: true,
-      sizes: [
-        { name: "P", price: 36.0 },
-        { name: "M", price: 46.0 },
-        { name: "G", price: 56.0 },
-      ],
+      name: "Ovo Burger",
+      description:
+        "Reforçado e delicioso! Nosso blend de 120g com queijo, presunto, e um ovo perfeitamente frito para completar essa obra de arte no pão de brioche.",
+      price: 31.9,
     },
     {
-      name: "Pizza Frango com Catupiry",
-      categoryId: pizzaCategory.id,
-      isHalfHalf: true,
-      sizes: [
-        { name: "P", price: 37.0 },
-        { name: "M", price: 47.0 },
-        { name: "G", price: 57.0 },
-      ],
+      name: "Tudo Burger",
+      description:
+        "O nome já diz tudo! Um exagero de sabor com blend de 120g, queijo, presunto, bacon, ovo, salada e o que mais você tiver direito. Prepare-se!",
+      price: 38.9,
+    },
+    {
+      name: "Duplo Cheddar",
+      description:
+        "O dobro de sabor! Duas carnes de 120g, o dobro de queijo cheddar, e nosso molho especial em um pão de brioche que aguenta o desafio.",
+      price: 39.9,
+    },
+    {
+      name: "Catupiry Especial",
+      description:
+        "Cremosidade sem igual! Nosso blend de 120g coberto com uma generosa camada de Catupiry original, bacon crocante e cebola caramelizada.",
+      price: 34.9,
+    },
+    {
+      name: "Gourmet da Casa",
+      description:
+        "Uma experiência única! Blend de 120g, queijo brie, rúcula, geleia de pimenta e maionese de alho em um pão australiano. Inesquecível.",
+      price: 37.9,
     },
   ];
 
-  // Hambúrgueres (preço único, sem tamanhos)
-  const burgers = [
-    { name: "X-Burger", categoryId: burgerCategory.id, price: 18.0 },
-    { name: "X-Salada", categoryId: burgerCategory.id, price: 20.0 },
-    { name: "X-Bacon", categoryId: burgerCategory.id, price: 22.0 },
-    { name: "X-Tudo", categoryId: burgerCategory.id, price: 25.0 },
-    {
-      name: "Hambúrguer Artesanal",
-      categoryId: burgerCategory.id,
-      price: 28.0,
-    },
+  const burgerExtras = [
+    { name: "Queijo Mussarela", price: 3.0 },
+    { name: "Queijo Cheddar Fatia", price: 3.5 },
+    { name: "Queijo Cheddar Molho", price: 4.5 },
+    { name: "Catupiry", price: 4.0 },
+    { name: "Presunto", price: 2.5 },
+    { name: "Bacon", price: 5.0 },
+    { name: "Ovo", price: 3.0 },
+    { name: "Salada", price: 2.0 },
+    { name: "Carne 120g", price: 8.0 },
   ];
 
-  // Bebidas (preço único, sem tamanhos)
-  const drinks = [
-    { name: "Coca-Cola 350ml", categoryId: drinkCategory.id, price: 6.0 },
-    {
-      name: "Guaraná Antarctica 350ml",
-      categoryId: drinkCategory.id,
-      price: 5.5,
-    },
-    { name: "Fanta Laranja 350ml", categoryId: drinkCategory.id, price: 5.5 },
-    { name: "Suco de Laranja 500ml", categoryId: drinkCategory.id, price: 8.0 },
-    { name: "Água Mineral 500ml", categoryId: drinkCategory.id, price: 4.0 },
-  ];
-
-  // Adicionais (extras)
-  const extras = [
-    { name: "Queijo Extra", price: 5.0 }, // Para pizzas ou hambúrgueres
-    { name: "Bacon", price: 6.0 }, // Para hambúrgueres ou pizzas
-    { name: "Catupiry Extra", price: 6.5 }, // Para pizzas
-    { name: "Pepperoni Extra", price: 7.0 }, // Para pizzas
-    { name: "Alface e Tomate", price: 3.0 }, // Para hambúrgueres
-  ];
-
-  // Popular Pizzas
-  const createdPizzas = [];
-  for (const pizza of pizzas) {
-    const createdPizza = await prisma.product.create({
+  for (const burger of burgersData) {
+    await prisma.product.create({
       data: {
-        name: pizza.name,
-        categoryId: pizza.categoryId,
-        isHalfHalf: pizza.isHalfHalf,
-        imageUrl:
-          "https://img.freepik.com/fotos-gratis/pizza-pizza-cheia-de-tomates-salame-e-azeitonas_140725-1200.jpg?t=st=1744671528~exp=1744675128~hmac=2643592523d49468d3cb30d93a38b0d730f46a123231bdfb056ac5f21a387154&w=740",
-        Size: {
-          create: pizza.sizes.map((size) => ({
-            name: size.name,
-            price: size.price,
-          })),
+        ...burger,
+        categoryId: burgerCategory.id,
+        imageUrl: "s3://parceria-app-imagens-de-produtos/Burguer.jpg",
+        Extras: {
+          create: burgerExtras,
         },
       },
     });
-    createdPizzas.push(createdPizza);
   }
+  console.log("Hambúrgueres e seus adicionais criados.");
 
-  // Popular Hambúrgueres
-  const createdBurgers = [];
-  for (const burger of burgers) {
-    const createdBurger = await prisma.product.create({
-      data: {
-        name: burger.name,
-        price: burger.price,
-        categoryId: burger.categoryId,
-        imageUrl:
-          "https://img.freepik.com/fotos-gratis/hamburguer-de-vista-frontal-em-um-carrinho_141793-15542.jpg?t=st=1744671528~exp=1744675128~hmac=e38d7ee5daf2bdcf8944c7b81c1914f08c6eff6d87911c7eceea11f0e45c9ccd&w=996",
-      },
-    });
-    createdBurgers.push(createdBurger);
-  }
+  // --- Pizzas ---
+  const pizzasData = [
+    {
+      name: "Margherita",
+      description:
+        "A realeza das pizzas: molho de tomate fresco, mussarela de primeira, manjericão e um fio de azeite. Simplesmente divina!",
+    },
+    {
+      name: "Calabresa",
+      description:
+        "A favorita da galera! Fatias de calabresa artesanal sobre um mar de mussarela e rodelas de cebola que dão o toque final.",
+    },
+    {
+      name: "Quatro Queijos",
+      description:
+        "Uma sinfonia de sabores com mussarela, provolone, parmesão e o toque cremoso do Catupiry. Para quem ama queijo sem moderação.",
+    },
+    {
+      name: "Frango com Catupiry",
+      description:
+        "A combinação que o brasileiro ama! Frango desfiado e temperado, coberto com o autêntico e cremoso Catupiry.",
+    },
+    {
+      name: "Portuguesa",
+      description:
+        "Uma viagem a Portugal em cada fatia. Presunto, ovos, cebola, azeitonas e pimentão sobre uma base de mussarela generosa.",
+    },
+    {
+      name: "Pepperoni",
+      description:
+        "Intensa e levemente picante. Fatias de pepperoni de alta qualidade espalhadas sobre queijo mussarela derretido. Um clássico com atitude.",
+    },
+  ];
 
-  // Popular Bebidas
-  for (const drink of drinks) {
+  const pizzaExtras = [
+    { name: "Queijo", price: 5.0 },
+    { name: "Bacon", price: 6.0 },
+    { name: "Queijo Cheddar Molho", price: 6.5 },
+    { name: "Catupiry", price: 6.0 },
+    { name: "Presunto", price: 4.0 },
+    { name: "Calabresa", price: 5.0 },
+    { name: "Ovo", price: 3.5 },
+  ];
+
+  const pizzaSizes = [
+    { name: "Média", price: 45.0 },
+    { name: "Grande", price: 55.0 },
+    { name: "Gigante", price: 65.0 },
+  ];
+
+  for (const pizza of pizzasData) {
     await prisma.product.create({
       data: {
-        name: drink.name,
-        price: drink.price,
-        categoryId: drink.categoryId,
+        ...pizza,
+        categoryId: pizzaCategory.id,
+        isHalfHalf: true,
+        price: null,
         imageUrl:
-          "https://img.freepik.com/vetores-gratis/anuncio-de-refrigerante-de-limao-realista_52683-8100.jpg?t=st=1744671528~exp=1744675128~hmac=ab9dcde6a181f7fbe26ad34e64d095447713e0747c9e2a8e698ed402deedfe1d&w=740",
+          "s3://parceria-app-imagens-de-produtos/0mHUxYlJbETkQaYzsUsG7-pizza_quatro_queijos.jpg",
+        Extras: {
+          create: pizzaExtras,
+        },
+        Size: {
+          create: pizzaSizes,
+        },
       },
     });
   }
+  console.log("Pizzas e seus adicionais/tamanhos criados.");
 
-  // Popular Extras (associados a produtos específicos)
-  await prisma.extra.create({
+  // --- Pratos ---
+  await prisma.product.create({
     data: {
-      name: extras[0].name, // Queijo Extra
-      price: extras[0].price,
-      productId: createdPizzas[0].id, // Associado à Pizza de Calabresa
+      name: "Batata Frita 250g",
+      description:
+        "A porção perfeita para um! Batatas selecionadas, fritas na hora, crocantes por fora e macias por dentro. Impossível resistir.",
+      price: 18.0,
+      categoryId: dishCategory.id,
+      imageUrl: "s3://parceria-app-imagens-de-produtos/Batata.jpg",
     },
   });
 
-  await prisma.extra.create({
+  await prisma.product.create({
     data: {
-      name: extras[1].name, // Bacon
-      price: extras[1].price,
-      productId: createdBurgers[2].id, // Associado ao X-Bacon
+      name: "Batata Frita 400g",
+      description:
+        "Para dividir com a galera (ou não!). Uma generosa porção de batatas douradas e crocantes, perfeitas para acompanhar qualquer pedido.",
+      price: 26.0,
+      categoryId: dishCategory.id,
+      imageUrl: "s3://parceria-app-imagens-de-produtos/Batata.jpg",
+    },
+  });
+  console.log("Pratos criados.");
+
+  // --- Bebidas ---
+  await prisma.product.create({
+    data: {
+      name: "Coca-Cola",
+      description:
+        "A clássica que todo mundo ama, geladinha para refrescar. Lata 350ml.",
+      price: 6.0,
+      categoryId: drinkCategory.id,
+      imageUrl: "s3://parceria-app-imagens-de-produtos/Refrigerante.jpg",
     },
   });
 
-  await prisma.extra.create({
+  await prisma.product.create({
     data: {
-      name: extras[2].name, // Catupiry Extra
-      price: extras[2].price,
-      productId: createdPizzas[4].id, // Associado à Pizza Frango com Catupiry
+      name: "Guaraná Antarctica",
+      description:
+        "O sabor autêntico do Brasil para acompanhar seu pedido. Lata 350ml.",
+      price: 5.5,
+      categoryId: drinkCategory.id,
+      imageUrl: "s3://parceria-app-imagens-de-produtos/Refrigerante.jpg",
     },
   });
 
-  await prisma.extra.create({
+  await prisma.product.create({
     data: {
-      name: extras[3].name, // Pepperoni Extra
-      price: extras[3].price,
-      productId: createdPizzas[3].id, // Associado à Pizza Pepperoni
+      name: "Heineken 600ml",
+      description:
+        "Uma cerveja premium de qualidade mundial, perfeitamente gelada para momentos especiais.",
+      price: 15.0,
+      categoryId: drinkCategory.id,
+      imageUrl: "s3://parceria-app-imagens-de-produtos/Cerveja.jpg",
     },
   });
 
-  await prisma.extra.create({
+  await prisma.product.create({
     data: {
-      name: extras[4].name, // Alface e Tomate
-      price: extras[4].price,
-      productId: createdBurgers[1].id, // Associado ao X-Salada
+      name: "Brahma 600ml",
+      description:
+        "A cerveja número 1 do Brasil, com a cremosidade e o sabor que você já conhece.",
+      price: 12.0,
+      categoryId: drinkCategory.id,
+      imageUrl: "s3://parceria-app-imagens-de-produtos/Cerveja.jpg",
     },
   });
+
+  await prisma.product.create({
+    data: {
+      name: "Suco de Laranja Natural",
+      description:
+        "Feito na hora com laranjas frescas para um sabor cítrico e revigorante. 500ml.",
+      price: 9.0,
+      categoryId: drinkCategory.id,
+      imageUrl: "s3://parceria-app-imagens-de-produtos/Refrigerante.jpg",
+    },
+  });
+
+  await prisma.product.create({
+    data: {
+      name: "Suco de Abacaxi com Hortelã",
+      description:
+        "A combinação tropical e refrescante que vai te surpreender. 500ml.",
+      price: 9.5,
+      categoryId: drinkCategory.id,
+      imageUrl: "s3://parceria-app-imagens-de-produtos/Refrigerante.jpg",
+    },
+  });
+  console.log("Bebidas criadas.");
 
   console.log("Seed concluído com sucesso!");
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error("Ocorreu um erro durante o seed:", e);
     process.exit(1);
   })
   .finally(async () => {
