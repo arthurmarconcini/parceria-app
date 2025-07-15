@@ -7,9 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { db } from "@/lib/prisma";
-
 import { formatBRL } from "@/helpers/currency-format";
-
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -20,11 +18,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal } from "lucide-react";
+import { ProductActions } from "./components/ProductActions"; // Importe o novo componente
+import { PlusCircle } from "lucide-react";
 
-const AddProductsPage = async () => {
+const ProductsPage = async () => {
   const products = await db.product.findMany({
-    where: { isActive: true },
     include: {
       category: true,
       Size: {
@@ -49,6 +47,11 @@ const AddProductsPage = async () => {
     <div className="container mx-auto py-6 md:py-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-2xl font-bold">Gerenciar Produtos</h1>
+        {/* Botão para adicionar novo produto (a lógica de estado será no ProductClient) */}
+        <Button>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Adicionar Produto
+        </Button>
       </div>
 
       <div className="border rounded-lg overflow-hidden">
@@ -59,28 +62,18 @@ const AddProductsPage = async () => {
               <TableHead className="hidden md:table-cell">Categoria</TableHead>
               <TableHead>Preço</TableHead>
               <TableHead className="hidden md:table-cell text-center">
-                Desconto
+                Status
               </TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {products.map((product) => (
-              <TableRow key={product.id}>
-                <TableCell className="font-medium">
-                  {product.name}
-                  <div className="text-xs text-muted-foreground md:hidden mt-1">
-                    <p>{product.category.name}</p>
-                    {product.discount && product.discount > 0 && (
-                      <p>
-                        Desconto:{" "}
-                        <Badge variant="destructive">
-                          {product.discount}% OFF
-                        </Badge>
-                      </p>
-                    )}
-                  </div>
-                </TableCell>
+              <TableRow
+                key={product.id}
+                data-state={product.isActive ? "" : "inactive"}
+              >
+                <TableCell className="font-medium">{product.name}</TableCell>
                 <TableCell className="hidden md:table-cell">
                   {product.category.name}
                 </TableCell>
@@ -113,23 +106,13 @@ const AddProductsPage = async () => {
                   )}
                 </TableCell>
                 <TableCell className="hidden md:table-cell text-center">
-                  {product.discount && product.discount > 0 ? (
-                    <Badge variant="destructive">{product.discount}% OFF</Badge>
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
+                  <Badge variant={product.isActive ? "success" : "destructive"}>
+                    {product.isActive ? "Ativo" : "Inativo"}
+                  </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {/* Componente de Ações */}
+                  <ProductActions product={product} categories={categories} />
                 </TableCell>
               </TableRow>
             ))}
@@ -140,4 +123,4 @@ const AddProductsPage = async () => {
   );
 };
 
-export default AddProductsPage;
+export default ProductsPage;
