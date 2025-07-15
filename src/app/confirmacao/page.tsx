@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { OrderTimeline } from "@/components/OrderTimeLine";
+ 
 
 interface ConfirmationPageProps {
   searchParams: {
@@ -36,10 +38,10 @@ export default async function OrderConfirmationPage({
           locality: true,
         },
       },
-
       user: {
         select: {
           name: true,
+          phone: true, 
         },
       },
     },
@@ -50,6 +52,12 @@ export default async function OrderConfirmationPage({
   }
 
   const displayName = order.isGuestOrder ? order.guestName : order.user?.name;
+  const displayPhone = order.isGuestOrder ? order.guestPhone : order.user?.phone;
+
+  
+  const whatsappMessage = `Olá ${displayName || "!"}, seu pedido #${order.orderNumber} foi confirmado! Você pode acompanhar o status aqui: ${process.env.NEXT_PUBLIC_BASE_URL}/confirmacao?orderId=${order.id}`;
+  const whatsappLink = `https://wa.me/55${displayPhone}?text=${encodeURIComponent(whatsappMessage)}`;
+
 
   return (
     <div className="container mx-auto flex flex-col items-center justify-center p-4 md:p-10 text-center">
@@ -59,6 +67,9 @@ export default async function OrderConfirmationPage({
         Obrigado, {displayName || "Cliente"}! Seu pedido foi recebido com
         sucesso.
       </p>
+
+      
+      <OrderTimeline initialOrder={order} />
 
       <Card className="mt-8 w-full max-w-lg text-left">
         <CardHeader>
@@ -81,11 +92,13 @@ export default async function OrderConfirmationPage({
             <h3 className="font-semibold text-foreground mb-1">
               Endereço de Entrega
             </h3>
-            <p className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground">
               {order.address.street}, {order.address.number}
               <br />
               {order.address.locality?.name}, {order.address.city}
-            </p>
+              {order.address.reference && <p className="text-xs text-muted-foreground/80 mt-0.5">Ref: {order.address.reference}</p>}
+              {order.address.observation && <p className="text-xs text-muted-foreground/80 mt-0.5">Obs: {order.address.observation}</p>}
+            </div>
           </div>
           <Separator />
           <div>
@@ -106,6 +119,13 @@ export default async function OrderConfirmationPage({
       </Card>
 
       <div className="mt-8 flex flex-col sm:flex-row gap-4 w-full max-w-lg">
+        {order.isGuestOrder && displayPhone && !session?.user && (
+           <Button asChild className="flex-1 bg-green-600 hover:bg-green-700 text-white" size="lg">
+             <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
+               Receber Atualizações no WhatsApp
+             </a>
+           </Button>
+         )}
         {session?.user && (
           <Button asChild className="flex-1" size="lg">
             <Link href="/pedidos">Acompanhar Meus Pedidos</Link>
