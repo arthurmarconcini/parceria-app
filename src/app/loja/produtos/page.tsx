@@ -7,9 +7,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { db } from "@/lib/prisma";
-import AddProduct from "./components/ProductDialog";
+
 import { formatBRL } from "@/helpers/currency-format";
-import ConfirmDeleteProductDialog from "./components/ConfirmDeleteProductDialog";
+
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -21,8 +21,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal } from "lucide-react";
-import EditProduct from "./components/EditProduct";
-// <-- Importaremos o novo componente de edição
 
 const AddProductsPage = async () => {
   const products = await db.product.findMany({
@@ -51,7 +49,6 @@ const AddProductsPage = async () => {
     <div className="container mx-auto py-6 md:py-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-2xl font-bold">Gerenciar Produtos</h1>
-        <AddProduct categories={categories} />
       </div>
 
       <div className="border rounded-lg overflow-hidden">
@@ -131,16 +128,6 @@ const AddProductsPage = async () => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <EditProduct
-                          product={product}
-                          categories={categories}
-                        />
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <ConfirmDeleteProductDialog productId={product.id} />
-                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
