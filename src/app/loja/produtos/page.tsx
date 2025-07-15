@@ -7,7 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { db } from "@/lib/prisma";
-import AddProduct from "./components/AddProduct";
+import AddProduct from "./components/ProductDialog";
 import { formatBRL } from "@/helpers/currency-format";
 import ConfirmDeleteProductDialog from "./components/ConfirmDeleteProductDialog";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { MoreHorizontal } from "lucide-react";
+import EditProduct from "./components/EditProduct";
+// <-- Importaremos o novo componente de edição
 
 const AddProductsPage = async () => {
   const products = await db.product.findMany({
@@ -31,6 +34,7 @@ const AddProductsPage = async () => {
           price: "asc",
         },
       },
+      Extras: true,
     },
     orderBy: {
       createdAt: "desc",
@@ -119,7 +123,26 @@ const AddProductsPage = async () => {
                   )}
                 </TableCell>
                 <TableCell className="text-right">
-                  <ConfirmDeleteProductDialog productId={product.id} />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <EditProduct
+                          product={product}
+                          categories={categories}
+                        />
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <ConfirmDeleteProductDialog productId={product.id} />
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}
