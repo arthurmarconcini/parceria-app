@@ -25,7 +25,6 @@ import { ProductForm } from "./ProductForm";
 import { PlusCircle } from "lucide-react";
 import { Category, Product, Size, Extra } from "@prisma/client";
 
-// Tipagem para os produtos com relações, necessária para as props
 type ProductWithDetails = Product & {
   category: Category;
   Size: Size[];
@@ -53,7 +52,6 @@ export const ProductClient = ({
         </Button>
       </div>
 
-      {/* O formulário modal é renderizado aqui, controlado pelo estado local */}
       <ProductForm
         categories={categories}
         open={isModalOpen}

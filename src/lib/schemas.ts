@@ -15,7 +15,6 @@ export const registerFormSchema = z
 
 export type RegisterFormValues = z.infer<typeof registerFormSchema>;
 
-// Schema para um único item (Tamanho ou Extra)
 const itemSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
   price: z.preprocess(
@@ -56,15 +55,11 @@ export const productSchema = z
     extras: z.array(itemSchema).optional(),
   })
   .superRefine((data, ctx) => {
-    // Se existem tamanhos, o preço base não é necessário.
     if (data.sizes && data.sizes.length > 0) {
       if (data.price) {
-        // Opcional: pode-se anular o preço base se tamanhos forem fornecidos
         data.price = undefined;
       }
-    }
-    // Se não existem tamanhos, o preço base é obrigatório.
-    else {
+    } else {
       if (data.price === undefined || data.price === null) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,

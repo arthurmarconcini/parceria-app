@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, ChangeEvent, FormEvent } from "react";
-
 import { Category } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -62,30 +61,29 @@ export function ProductForm({
   );
   const hasSizes = formData.sizes && formData.sizes.length > 0;
 
+  const formatToBRL = (value: string): string => {
+    const digitsOnly = value.replace(/\D/g, "");
+    if (!digitsOnly) return "";
+    const numberValue = parseInt(digitsOnly, 10) / 100;
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(numberValue);
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-
     if (!file) return;
 
     setImageFile(file);
-
     setIsUploading(true);
-
     toast.info("Enviando imagem...");
 
     try {
-      // 1. Obter a URL pré-assinada da nossa API
-
       const presignedUrlResponse = await fetch("/api/upload", {
         method: "POST",
-
         headers: { "Content-Type": "application/json" },
-
-        body: JSON.stringify({
-          filename: file.name,
-
-          contentType: file.type,
-        }),
+        body: JSON.stringify({ filename: file.name, contentType: file.type }),
       });
 
       if (!presignedUrlResponse.ok) {
@@ -94,13 +92,9 @@ export function ProductForm({
 
       const { url, publicUrl } = await presignedUrlResponse.json();
 
-      // 2. Enviar o arquivo para a URL pré-assinada do S3
-
       const uploadResponse = await fetch(url, {
         method: "PUT",
-
         body: file,
-
         headers: { "Content-Type": file.type },
       });
 
@@ -108,19 +102,14 @@ export function ProductForm({
         throw new Error("Falha ao enviar imagem para o S3.");
       }
 
-      // 3. Salvar a URL pública final no estado
-
       setFormData((prev) => ({ ...prev, imageUrl: publicUrl }));
-
       toast.success("Imagem enviada com sucesso!");
     } catch (error) {
       console.error(error);
-
       toast.error(
         error instanceof Error ? error.message : "Erro no upload da imagem."
       );
-
-      setImageFile(null); // Limpa o arquivo se der erro
+      setImageFile(null);
     } finally {
       setIsUploading(false);
     }
@@ -129,7 +118,32 @@ export function ProductForm({
   const handleInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
+    e.preventDefault();
     const { name, value } = e.target;
+
+    if (name === "price") {
+      const digitsOnly = value.replace(/\D/g, "");
+      const numberValue = digitsOnly
+        ? parseInt(digitsOnly, 10) / 100
+        : undefined;
+      setFormData((prev) => ({ ...prev, [name]: numberValue }));
+      return;
+    }
+
+    if (name === "categoryId") {
+      const selectedCategory = categories.find((cat) => cat.id === value);
+
+      const shouldBeHalfHalf =
+        selectedCategory?.name.toLowerCase() === "pizzas";
+
+      setFormData((prev) => ({
+        ...prev,
+        categoryId: value,
+        isHalfHalf: shouldBeHalfHalf,
+      }));
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -144,15 +158,17 @@ export function ProductForm({
     value: string
   ) => {
     const newList = [...(formData[listName] || [])];
-    const processedValue = field === "price" ? value.replace(/\D/g, "") : value;
-    newList[index] = { ...newList[index], [field]: processedValue };
+    const processedValue = field === "price" ? formatToBRL(value) : value;
+    const currentItem = newList[index] || {};
+    newList[index] = { ...currentItem, [field]: processedValue };
     setFormData((prev) => ({ ...prev, [listName]: newList }));
   };
 
   const addDynamicListItem = (listName: "sizes" | "extras") => {
-    const newList = [...(formData[listName] || [])];
-    newList.push({ name: "", price: 0 });
-    setFormData((prev) => ({ ...prev, [listName]: newList }));
+    setFormData((prev) => ({
+      ...prev,
+      [listName]: [...(prev[listName] || []), { name: "", price: "" }],
+    }));
   };
 
   const removeDynamicListItem = (
@@ -183,9 +199,7 @@ export function ProductForm({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
-
     setIsSubmitting(true);
-    toast.loading("Criando produto...");
 
     try {
       await createProduct(formData);
@@ -320,9 +334,17 @@ export function ProductForm({
                   <Input
                     id="price"
                     name="price"
-                    value={formData.price || ""}
+                    type="text"
+                    value={
+                      formData.price !== undefined
+                        ? new Intl.NumberFormat("pt-BR", {
+                            style: "currency",
+                            currency: "BRL",
+                          }).format(formData.price)
+                        : ""
+                    }
                     onChange={handleInputChange}
-                    placeholder="R$ 25,00"
+                    placeholder="R$ 0,00"
                   />
                   {errors.price && (
                     <p className="text-sm text-red-500">{errors.price}</p>
@@ -353,7 +375,7 @@ export function ProductForm({
             <h3 className="text-lg font-semibold mb-2">
               Configurações Adicionais
             </h3>
-            {selectedCategory?.name.toLowerCase() === "pizza" && (
+            {selectedCategory?.name.toLowerCase() === "pizzas" && (
               <div className="flex items-center space-x-2 border p-4 rounded-md">
                 <Checkbox
                   id="isHalfHalf"
@@ -390,7 +412,8 @@ export function ProductForm({
                   <div className="flex-1 space-y-2">
                     <Label>Preço (R$)</Label>
                     <Input
-                      placeholder="19,99"
+                      name="price"
+                      placeholder="R$ 0,00"
                       value={size.price || ""}
                       onChange={(e) =>
                         handleDynamicListChange(
@@ -449,7 +472,8 @@ export function ProductForm({
                   <div className="flex-1 space-y-2">
                     <Label>Preço (R$)</Label>
                     <Input
-                      placeholder="5,00"
+                      name="price"
+                      placeholder="R$ 0,00"
                       value={extra.price || ""}
                       onChange={(e) =>
                         handleDynamicListChange(
