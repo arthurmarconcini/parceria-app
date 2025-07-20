@@ -13,7 +13,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Monitor, Barcode, List, Clock } from "lucide-react";
+import { Monitor, Barcode, List, Clock, ClipboardMinus } from "lucide-react";
 
 // Definição dos itens do menu para facilitar a manutenção
 const menuItems = [
@@ -37,12 +37,17 @@ const menuItems = [
     url: "/loja/horarios",
     icon: Clock,
   },
+  {
+    title: "Relatórios",
+    url: "/loja/relatorios",
+    icon: ClipboardMinus,
+  },
 ];
 
 const AppSidebar = () => {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const { state } = useSidebar(); // Hook para obter o estado da sidebar
+  const { state } = useSidebar();
 
   const getAvatarFallback = (name?: string | null) => {
     if (!name) return "AD";

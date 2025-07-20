@@ -42,7 +42,7 @@ export function ProductForm({
     description: "",
     categoryId: "",
     imageUrl: "",
-    price: undefined,
+    price: null,
     discount: 0,
     isHalfHalf: false,
     sizes: [],
@@ -167,6 +167,7 @@ export function ProductForm({
   const addDynamicListItem = (listName: "sizes" | "extras") => {
     setFormData((prev) => ({
       ...prev,
+      price: prev.price && null,
       [listName]: [...(prev[listName] || []), { name: "", price: "" }],
     }));
   };
@@ -337,10 +338,7 @@ export function ProductForm({
                     type="text"
                     value={
                       formData.price !== undefined
-                        ? new Intl.NumberFormat("pt-BR", {
-                            style: "currency",
-                            currency: "BRL",
-                          }).format(formData.price)
+                        ? formatToBRL(String(formData.price))
                         : ""
                     }
                     onChange={handleInputChange}

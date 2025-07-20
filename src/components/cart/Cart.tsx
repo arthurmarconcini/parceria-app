@@ -38,8 +38,11 @@ const Cart = () => {
   const router = useRouter();
   const [cep, setCep] = useState("");
   const [localities, setLocalities] = useState<Locality[]>([]);
+  const [isLoadingLocalities, setIsLoadingLocalities] = useState(true);
 
   useEffect(() => {
+    setIsLoadingLocalities(true);
+
     const fetchLocalities = async () => {
       try {
         const response = await fetch("/api/localities");
@@ -51,6 +54,8 @@ const Cart = () => {
             ? error.message
             : "Erro ao carregar áreas de entrega."
         );
+      } finally {
+        setIsLoadingLocalities(false);
       }
     };
     fetchLocalities();
@@ -58,6 +63,8 @@ const Cart = () => {
 
   const calculateDeliveryFee = useCallback(
     (bairro: string, id: string, type: "address" | "cep") => {
+      if (isLoadingLocalities || localities.length === 0) return;
+
       const locality = localities.find(
         (loc) => loc.name.toLowerCase() === bairro.toLowerCase()
       );
@@ -66,14 +73,22 @@ const Cart = () => {
         setDeliveryFee(locality.deliveryFee, { type, value: id });
       } else {
         setDeliveryFee(0, null);
+        console.log(
+          `Bairro "${bairro}" não encontrado nas localidades. ${locality}`
+        );
+
         toast.error("Não entregamos na sua região.");
       }
     },
-    [localities, setDeliveryFee]
+    [localities, setDeliveryFee, isLoadingLocalities]
   );
 
   useEffect(() => {
     const handleShipping = async () => {
+      if (isLoadingLocalities) {
+        return;
+      }
+
       if (session?.user) {
         try {
           const res = await fetch("/api/user/address");
@@ -85,6 +100,8 @@ const Cart = () => {
             await res.json();
           if (address?.locality) {
             calculateDeliveryFee(address.locality.name, address.id, "address");
+          } else {
+            setDeliveryFee(0, null);
           }
         } catch (error) {
           toast.error(
@@ -121,7 +138,14 @@ const Cart = () => {
     };
 
     handleShipping();
-  }, [session, cep, localities, calculateDeliveryFee, setDeliveryFee]);
+  }, [
+    session,
+    cep,
+    localities,
+    calculateDeliveryFee,
+    setDeliveryFee,
+    isLoadingLocalities,
+  ]);
 
   function handleCheckout() {
     toggleCart();

@@ -49,17 +49,21 @@ export const productSchema = z
     price: z.preprocess(
       (val) =>
         val ? Number(String(val).replace(/[^0-9]/g, "")) / 100 : undefined,
-      z.number().positive("O preço deve ser positivo.").optional()
+      z.number().positive("O preço deve ser positivo.").optional().nullable()
     ),
     sizes: z.array(itemSchema).optional(),
     extras: z.array(itemSchema).optional(),
   })
   .superRefine((data, ctx) => {
+    // REGRA 1: Se o produto TEM variações de tamanho...
     if (data.sizes && data.sizes.length > 0) {
-      if (data.price) {
-        data.price = undefined;
-      }
-    } else {
+      // MODIFICAÇÃO PRINCIPAL: O preço base DEVE ser nulo.
+      // Esta linha transforma o valor para `null` antes da validação final.
+      data.price = null;
+    }
+    // REGRA 2: Se o produto NÃO TEM variações de tamanho...
+    else {
+      // MANTIDO: O preço base é OBRIGATÓRIO e deve ser um número positivo.
       if (data.price === undefined || data.price === null) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,

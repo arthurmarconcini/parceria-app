@@ -16,10 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { toggleProductStatus } from "../actions/product";
 import { useRouter } from "next/navigation";
-// Um modal/dialog de confirmação seria importado aqui
-// import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 
-// Tipagem completa do produto para o componente
 type ProductWithDetails = Product & {
   category: Category;
   Size: Size[];
@@ -28,7 +25,7 @@ type ProductWithDetails = Product & {
 
 interface ProductActionsProps {
   product: ProductWithDetails;
-  categories: Category[]; // Para o formulário de edição
+  categories: Category[];
 }
 
 export function ProductActions({ product }: ProductActionsProps) {
@@ -37,12 +34,12 @@ export function ProductActions({ product }: ProductActionsProps) {
 
   const handleStatusToggle = async () => {
     const newStatus = !isActive;
-    setIsActive(newStatus); // Otimista UI update
+    setIsActive(newStatus);
 
     toast.promise(toggleProductStatus(product.id, !newStatus), {
       loading: "Alterando status...",
       success: () => {
-        router.refresh(); // Revalida os dados da página
+        router.refresh();
         return `Produto ${newStatus ? "ativado" : "desativado"} com sucesso.`;
       },
       error: (err) => {
@@ -55,8 +52,6 @@ export function ProductActions({ product }: ProductActionsProps) {
   };
 
   const handleDelete = () => {
-    // A lógica para deletar o produto, geralmente com um dialog de confirmação, viria aqui.
-    // Ex: openDeleteDialog(product.id)
     toast.info("Funcionalidade de exclusão a ser implementada.");
   };
 
