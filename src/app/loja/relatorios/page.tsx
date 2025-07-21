@@ -1,25 +1,31 @@
-import { redirect } from "next/navigation";
+import { getReports } from "./actions/reportActions";
 
-import { auth } from "@/auth";
-import ReportFilters from "./components/ReportFilters";
-import ReportTable from "./components/ReportTable";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import ReportsClient from "./components/ReportClient";
 
-const RelatoriosPage = async () => {
-  const session = await auth();
+// A página de relatórios é um Server Component que busca os dados iniciais.
+export default async function ReportsPage() {
+  // Busca os relatórios do dia atual ao carregar a página.
+  const initialReportData = await getReports({});
 
-  if (
-    !session ||
-    (session.user.role !== "ADMIN" && session.user.role !== "CASHIER")
-  ) {
-    redirect("/");
-  }
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Relatórios Administrativos</h1>
-      <ReportFilters />
-      <ReportTable />
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Relatório de Vendas</CardTitle>
+        <CardDescription>
+          Analise as vendas por data, status e forma de pagamento.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {/* O componente cliente recebe os dados iniciais e gerencia a interatividade. */}
+        <ReportsClient initialReportData={initialReportData} />
+      </CardContent>
+    </Card>
   );
-};
-
-export default RelatoriosPage;
+}

@@ -1,7 +1,18 @@
 "use client";
-import { useState } from "react";
+
+import { Dispatch, SetStateAction } from "react";
+import { DateRange } from "react-day-picker";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -9,47 +20,115 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { PaymentMethod, Status } from "@prisma/client";
 
-export default function ReportFilters() {
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [status, setStatus] = useState("all");
+interface ReportFiltersProps {
+  date: DateRange | undefined;
+  setDate: Dispatch<SetStateAction<DateRange | undefined>>;
+  status: string;
+  setStatus: Dispatch<SetStateAction<string>>;
+  paymentMethod: string;
+  setPaymentMethod: Dispatch<SetStateAction<string>>;
+  onApplyFilters: () => void;
+  isPending: boolean;
+}
 
-  const handleGenerate = () => {
-    // Lógica para disparar query com filtros (ex.: chamar hook ou API)
-    console.log("Gerando relatório com filtros:", {
-      startDate,
-      endDate,
-      status,
-    });
-  };
-
+/**
+ * Componente com os controles de filtro para a página de relatórios.
+ */
+const ReportFilters = ({
+  date,
+  setDate,
+  status,
+  setStatus,
+  paymentMethod,
+  setPaymentMethod,
+  onApplyFilters,
+  isPending,
+}: ReportFiltersProps) => {
   return (
-    <div className="flex gap-4 mb-6">
-      <Input
-        type="date"
-        placeholder="Data inicial"
-        value={startDate}
-        onChange={(e) => setStartDate(e.target.value)}
-      />
-      <Input
-        type="date"
-        placeholder="Data final"
-        value={endDate}
-        onChange={(e) => setEndDate(e.target.value)}
-      />
+    <div className="flex flex-col md:flex-row items-center gap-4 p-4 border rounded-lg">
+      {/* Seletor de Data */}
+      <div className="grid gap-2 flex-1 w-full">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              id="date"
+              variant={"outline"}
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !date && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {date?.from ? (
+                date.to ? (
+                  <>
+                    {format(date.from, "LLL dd, y", { locale: ptBR })} -{" "}
+                    {format(date.to, "LLL dd, y", { locale: ptBR })}
+                  </>
+                ) : (
+                  format(date.from, "LLL dd, y", { locale: ptBR })
+                )
+              ) : (
+                <span>Selecione uma data</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              autoFocus
+              mode="range"
+              defaultMonth={date?.from}
+              selected={date}
+              onSelect={setDate}
+              numberOfMonths={2}
+              locale={ptBR}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* Seletor de Status */}
       <Select value={status} onValueChange={setStatus}>
-        <SelectTrigger>
+        <SelectTrigger className="w-full md:w-[180px]">
           <SelectValue placeholder="Status" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Todos</SelectItem>
-          <SelectItem value="pending">Pendente</SelectItem>
-          <SelectItem value="delivered">Entregue</SelectItem>
-          {/* Adicione mais status conforme o schema Prisma */}
+          <SelectItem value="todos">Todos os Status</SelectItem>
+          {Object.values(Status).map((s) => (
+            <SelectItem key={s} value={s}>
+              {s}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
-      <Button onClick={handleGenerate}>Gerar Relatório</Button>
+
+      {/* Seletor de Método de Pagamento */}
+      <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+        <SelectTrigger className="w-full md:w-[220px]">
+          <SelectValue placeholder="Forma de Pagamento" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="todos">Todas as Formas</SelectItem>
+          {Object.values(PaymentMethod).map((pm) => (
+            <SelectItem key={pm} value={pm}>
+              {pm}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Button
+        onClick={onApplyFilters}
+        disabled={isPending}
+        className="w-full md:w-auto"
+      >
+        {isPending ? "Aplicando..." : "Aplicar Filtros"}
+      </Button>
     </div>
   );
-}
+};
+
+export default ReportFilters;
