@@ -19,13 +19,8 @@ interface PrintableReportProps {
   };
 }
 
-/**
- * Componente formatado para impressão em impressora térmica.
- * Utiliza `forwardRef` para que o `useReactToPrint` possa acessá-lo.
- */
 const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
   ({ orders, filters }, ref) => {
-    // Calcula os totais e resumos com base nos dados filtrados.
     const totalAmount = orders.reduce((acc, order) => acc + order.total, 0);
     const totalOrders = orders.length;
 

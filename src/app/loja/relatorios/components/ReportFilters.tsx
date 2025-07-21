@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { PaymentMethod, Status } from "@prisma/client";
+import { translateStatus } from "@/helpers/translate-status";
 
 interface ReportFiltersProps {
   date: DateRange | undefined;
@@ -34,9 +35,6 @@ interface ReportFiltersProps {
   isPending: boolean;
 }
 
-/**
- * Componente com os controles de filtro para a página de relatórios.
- */
 const ReportFilters = ({
   date,
   setDate,
@@ -49,7 +47,6 @@ const ReportFilters = ({
 }: ReportFiltersProps) => {
   return (
     <div className="flex flex-col md:flex-row items-center gap-4 p-4 border rounded-lg">
-      {/* Seletor de Data */}
       <div className="grid gap-2 flex-1 w-full">
         <Popover>
           <PopoverTrigger asChild>
@@ -90,8 +87,10 @@ const ReportFilters = ({
         </Popover>
       </div>
 
-      {/* Seletor de Status */}
-      <Select value={status} onValueChange={setStatus}>
+      <Select
+        value={status || "todos"}
+        onValueChange={(e) => (e === "todos" ? setStatus("") : setStatus(e))}
+      >
         <SelectTrigger className="w-full md:w-[180px]">
           <SelectValue placeholder="Status" />
         </SelectTrigger>
@@ -99,13 +98,12 @@ const ReportFilters = ({
           <SelectItem value="todos">Todos os Status</SelectItem>
           {Object.values(Status).map((s) => (
             <SelectItem key={s} value={s}>
-              {s}
+              {translateStatus(s)}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
 
-      {/* Seletor de Método de Pagamento */}
       <Select value={paymentMethod} onValueChange={setPaymentMethod}>
         <SelectTrigger className="w-full md:w-[220px]">
           <SelectValue placeholder="Forma de Pagamento" />

@@ -20,9 +20,6 @@ interface ReportTableProps {
   isLoading: boolean;
 }
 
-/**
- * Tabela que exibe a lista de pedidos do relatório.
- */
 const ReportTable = ({ orders, isLoading }: ReportTableProps) => {
   return (
     <div>
@@ -41,7 +38,6 @@ const ReportTable = ({ orders, isLoading }: ReportTableProps) => {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              // Exibe esqueletos de carregamento enquanto os dados são buscados.
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
                   <TableCell>
@@ -65,7 +61,6 @@ const ReportTable = ({ orders, isLoading }: ReportTableProps) => {
                 </TableRow>
               ))
             ) : orders.length > 0 ? (
-              // Renderiza os dados dos pedidos.
               orders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell className="font-medium">
@@ -89,7 +84,6 @@ const ReportTable = ({ orders, isLoading }: ReportTableProps) => {
                 </TableRow>
               ))
             ) : (
-              // Mensagem para quando não há resultados.
               <TableRow>
                 <TableCell colSpan={6} className="text-center h-24">
                   Nenhum resultado encontrado.

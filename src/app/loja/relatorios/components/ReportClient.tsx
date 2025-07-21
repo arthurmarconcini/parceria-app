@@ -20,10 +20,8 @@ import ReportsDashboard from "./ReportDashboard";
 import ReportsPagination from "./ReportPagination";
 import PrintableReport from "./PrintableReport";
 
-// Define o tipo para os dados do relatório, incluindo informações de usuário.
 export type OrderWithUser = Order & { user: User | null };
 
-// Define o tipo para os dados completos do relatório.
 type ReportData = {
   orders: OrderWithUser[];
   pagination: {
@@ -42,21 +40,15 @@ interface ReportsClientProps {
   initialReportData: ReportData;
 }
 
-/**
- * Componente principal do lado do cliente para a página de relatórios.
- * Gerencia o estado dos filtros, busca de dados, paginação e impressão.
- */
 const ReportsClient = ({ initialReportData }: ReportsClientProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
-  // Estado para armazenar os dados do relatório.
   const [reportData, setReportData] = useState<ReportData>(initialReportData);
-  // Estado para os dados completos a serem impressos.
+
   const [printData, setPrintData] = useState<OrderWithUser[]>([]);
 
-  // Estados para os filtros.
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(),
     to: new Date(),
@@ -66,12 +58,10 @@ const ReportsClient = ({ initialReportData }: ReportsClientProps) => {
 
   const componentToPrintRef = useRef<HTMLDivElement>(null);
 
-  // Hook para acionar a impressão.
   const handlePrint = useReactToPrint({
     contentRef: componentToPrintRef,
     documentTitle: `Relatorio-${format(new Date(), "dd-MM-yyyy-HH-mm")}`,
     onBeforePrint: () => {
-      // Antes de imprimir, busca todos os dados filtrados (sem paginação).
       return new Promise<void>((resolve) => {
         startTransition(async () => {
           try {
@@ -89,10 +79,9 @@ const ReportsClient = ({ initialReportData }: ReportsClientProps) => {
         });
       });
     },
-    onAfterPrint: () => setPrintData([]), // Limpa os dados de impressão após imprimir.
+    onAfterPrint: () => setPrintData([]),
   });
 
-  // Efeito para carregar os filtros da URL quando o componente é montado.
   useEffect(() => {
     const from = searchParams.get("from");
     const to = searchParams.get("to");
@@ -107,7 +96,6 @@ const ReportsClient = ({ initialReportData }: ReportsClientProps) => {
     setPaymentMethod(paymentMethodParam || "");
   }, [searchParams]);
 
-  // Função para buscar os relatórios com base nos filtros atuais.
   const handleFetchReports = (page = 1) => {
     startTransition(async () => {
       try {
@@ -125,7 +113,6 @@ const ReportsClient = ({ initialReportData }: ReportsClientProps) => {
     });
   };
 
-  // Função para aplicar os filtros e atualizar a URL.
   const handleApplyFilters = () => {
     const params = new URLSearchParams();
     if (date?.from) params.set("from", date.from.toISOString());
@@ -133,7 +120,7 @@ const ReportsClient = ({ initialReportData }: ReportsClientProps) => {
     if (status) params.set("status", status);
     if (paymentMethod) params.set("paymentMethod", paymentMethod);
     router.push(`?${params.toString()}`);
-    handleFetchReports(1); // Volta para a primeira página ao aplicar filtros.
+    handleFetchReports(1);
   };
 
   return (
@@ -166,7 +153,6 @@ const ReportsClient = ({ initialReportData }: ReportsClientProps) => {
         onPageChange={handleFetchReports}
       />
 
-      {/* Componente oculto que será usado para a impressão */}
       <div className="hidden">
         <PrintableReport
           ref={componentToPrintRef}
