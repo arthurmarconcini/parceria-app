@@ -1,76 +1,99 @@
 "use client";
 
-import {
-  useState,
-  ChangeEvent,
-  FormEvent,
-  useEffect,
-  useMemo,
-  useTransition,
-} from "react";
-import { Category } from "@prisma/client";
-
-import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useFieldArray, useForm, Controller } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-
-import { Label } from "@/components/ui/label";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { NativeSelect } from "@/components/ui/native-select";
-import { Separator } from "@/components/ui/separator";
-import { Trash2, PlusCircle, UploadCloud } from "lucide-react";
+import { toast } from "sonner";
+import { createProduct, updateProduct } from "../actions/product"; // Importando as actions corretas
+import { useRouter } from "next/navigation";
+import { Category } from "@prisma/client";
+import { Switch } from "@/components/ui/switch";
+import { Trash2 } from "lucide-react";
 import Image from "next/image";
-import { createProduct, updateProduct } from "../actions/product"; // Server Action
-import { ProductFormValues, productSchema } from "@/lib/schemas";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import { productSchema, ProductFormValues } from "@/lib/schemas"; // Schema (output type)
 import { ProductWithRelations } from "./ProductClient";
-import { formatBRL, parseBRL } from "@/helpers/currency-format";
+import { z } from "zod";
+import { useEffect, useState } from "react";
+
+// Tipo para os dados de ENTRADA do formulário, antes da validação do Zod.
+type ProductFormInput = z.input<typeof productSchema>;
 
 interface ProductFormProps {
+  product?: ProductWithRelations | null; // Produto a ser editado, se houver
   categories: Category[];
-  productToEdit?: ProductWithRelations | null;
-  onSuccess: () => void;
+  onSuccess: () => void; // Callback opcional para sucesso
 }
 
-type FormErrors = { [key: string]: string | undefined };
-
 export function ProductForm({
+  product,
   categories,
-  productToEdit,
   onSuccess,
 }: ProductFormProps) {
-  const initialFormState = useMemo<ProductFormValues>(
-    () => ({
-      name: "",
-      description: "",
-      categoryId: "",
-      imageUrl: "",
-      price: null,
-      discount: 0,
-      isHalfHalf: false,
-      sizes: [],
-      extras: [],
-    }),
-    []
-  );
-
-  const [formData, setFormData] = useState<ProductFormValues>(initialFormState);
-  const [isPending, startTransition] = useTransition();
-  const [errors, setErrors] = useState<FormErrors>({});
-
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const router = useRouter();
   const [isUploading, setIsUploading] = useState(false);
 
-  const selectedCategory = categories.find(
-    (cat) => cat.id === formData.categoryId
-  );
-  const hasSizes = formData.sizes && formData.sizes.length > 0;
+  // Os valores padrão devem corresponder ao tipo de ENTRADA do formulário.
+  const defaultValues: ProductFormInput = {
+    name: product?.name ?? "",
+    description: product?.description ?? "",
+    categoryId: product?.categoryId ?? "",
+    imageUrl: product?.imageUrl ?? "",
+    price: product?.price ? Number(product.price) : null,
+    discount: product?.discount ?? 0,
+    isHalfHalf: product?.isHalfHalf ?? false,
+    sizes: product?.Size.map((s) => ({ ...s, price: Number(s.price) })) ?? [],
+    extras:
+      product?.Extras?.map((e) => ({ ...e, price: Number(e.price) })) ?? [],
+  };
+
+  const form = useForm<ProductFormInput>({
+    resolver: zodResolver(productSchema),
+    defaultValues,
+  });
+
+  const {
+    fields: sizeFields,
+    append: appendSize,
+    remove: removeSize,
+  } = useFieldArray({
+    control: form.control,
+    name: "sizes",
+  });
+
+  const {
+    fields: extraFields,
+    append: appendExtra,
+    remove: removeExtra,
+  } = useFieldArray({
+    control: form.control,
+    name: "extras",
+  });
+
+  const watchSizes = form.watch("sizes");
+  const isPriceDisabled = Array.isArray(watchSizes) && watchSizes.length > 0;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setImageFile(file);
     setIsUploading(true);
     toast.info("Enviando imagem...");
 
@@ -97,388 +120,301 @@ export function ProductForm({
         throw new Error("Falha ao enviar imagem para o S3.");
       }
 
-      setFormData((prev) => ({ ...prev, imageUrl: publicUrl }));
+      form.setValue("imageUrl", publicUrl, { shouldValidate: true });
       toast.success("Imagem enviada com sucesso!");
     } catch (error) {
       console.error(error);
       toast.error(
         error instanceof Error ? error.message : "Erro no upload da imagem."
       );
-      setImageFile(null);
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handleInputChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    e.preventDefault();
-    const { name, value } = e.target;
-
-    if (name === "price") {
-      setFormData((prev) => ({
-        ...prev,
-        price: parseBRL(value),
-      }));
-      return;
-    }
-
-    // Desconto (%)
-    if (name === "discount") {
-      const discount = Math.min(
-        100,
-        Math.max(0, value ? parseFloat(value) : 0)
-      );
-      setFormData((prev) => ({ ...prev, discount }));
-      return;
-    }
-
-    // Categoria → força meio-a-meio se for pizza
-    if (name === "categoryId") {
-      const selectedCat = categories.find((c) => c.id === value);
-      setFormData((prev) => ({
-        ...prev,
-        categoryId: value,
-
-        isHalfHalf: selectedCat?.name.toLowerCase() === "pizzas",
-      }));
-      return;
-    }
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleCheckboxChange = (checked: boolean) => {
-    setFormData((prev) => ({ ...prev, isHalfHalf: checked }));
-  };
-
-  const handleDynamicListChange = (
-    listName: "sizes" | "extras",
-    index: number,
-    field: "name" | "price",
-    value: string
-  ) => {
-    const newList = [...(formData[listName] || [])];
-
-    if (field === "name") {
-      (newList[index] as { name: string; price: number | string }).name = value;
-    } else if (field === "price") {
-      (
-        newList[index] as { name: string; price: number | string | null }
-      ).price = parseBRL(value);
-    }
-
-    setFormData((prev) => ({ ...prev, [listName]: newList }));
-  };
-
-  const addDynamicListItem = (listName: "sizes" | "extras") => {
-    setFormData((prev) => ({
-      ...prev,
-      [listName]: [...(prev[listName] || []), { name: "", price: 0 }],
-      price: null,
-    }));
-  };
-
-  const removeDynamicListItem = (
-    listName: "sizes" | "extras",
-    index: number
-  ) => {
-    const newList = [...(formData[listName] || [])];
-    newList.splice(index, 1);
-    setFormData((prev) => ({ ...prev, [listName]: newList }));
-  };
-
-  const validateForm = (): boolean => {
-    const result = productSchema.safeParse(formData);
-    if (!result.success) {
-      const newErrors: FormErrors = {};
-      result.error.errors.forEach((err) => {
-        const path = err.path.join(".");
-        newErrors[path] = err.message;
-      });
-      setErrors(newErrors);
-      toast.error("Por favor, corrija os erros no formulário.");
-      return false;
-    }
-    setErrors({});
-    return true;
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-
-    startTransition(async () => {
-      const result = productToEdit
-        ? await updateProduct(productToEdit.id, {
-            ...formData,
-            price: formData.price === 0 || null ? null : formData.price,
-            extras:
-              formData.extras && formData.extras.length > 0
-                ? formData.extras.map((extra) => ({
-                    ...extra,
-                    price: Number(extra.price),
-                  }))
-                : [],
-          })
-        : await createProduct({
-            ...formData,
-            price: formData.price === 0 || null ? null : formData.price,
-            extras:
-              formData.extras && formData.extras.length > 0
-                ? formData.extras.map((extra) => ({
-                    ...extra,
-                    price: Number(extra.price),
-                  }))
-                : [],
-          });
-
-      if (result.success) {
-        toast.success(result.message);
-        onSuccess();
+  // A função onSubmit agora chama a action correta (create ou update).
+  async function onSubmit(data: ProductFormValues) {
+    try {
+      let response;
+      if (product) {
+        // Chama a action de atualização se um produto existente for fornecido.
+        response = await updateProduct(product.id, data);
       } else {
-        toast.error(result.message);
+        // Chama a action de criação para um novo produto.
+        response = await createProduct(data);
       }
-    });
-  };
+
+      if (response.success) {
+        onSuccess();
+        toast.success(response.message);
+        router.push("/loja/produtos");
+        router.refresh();
+      } else {
+        toast.error(response.message);
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Ocorreu um erro inesperado.";
+      toast.error(errorMessage);
+    }
+  }
+
+  // Efeito para resetar e popular o formulário quando o produto selecionado mudar.
+  useEffect(() => {
+    if (product) {
+      // Se um produto for passado, calcula os valores e reseta o formulário com eles.
+      const formValues: ProductFormInput = {
+        name: product.name ?? "",
+        description: product.description ?? "",
+        categoryId: product.categoryId ?? "",
+        imageUrl: product.imageUrl ?? "",
+        price: product.price && product.Size ? Number(product.price) : null,
+        discount: product.discount ?? 0,
+        isHalfHalf: product.isHalfHalf ?? false,
+        sizes:
+          product.Size.map((s) => ({ ...s, price: Number(s.price) })) ?? [],
+        extras:
+          product.Extras?.map((e) => ({ ...e, price: Number(e.price) })) ?? [],
+      };
+      form.reset(formValues);
+    } else {
+      // Se nenhum produto for passado (modo de criação), reseta para os valores vazios.
+      form.reset({
+        name: "",
+        description: "",
+        categoryId: "",
+        imageUrl: "",
+        price: null,
+        discount: 0,
+        isHalfHalf: false,
+        sizes: [],
+        extras: [],
+      });
+    }
+  }, [product, form]);
 
   useEffect(() => {
-    if (productToEdit) {
-      const editData = {
-        name: productToEdit.name,
-        description: productToEdit.description ?? "",
-        categoryId: productToEdit.categoryId,
-        imageUrl: productToEdit.imageUrl ?? "",
-        discount: productToEdit.discount ?? 0,
-        isHalfHalf: productToEdit.isHalfHalf ?? false,
-        price: productToEdit.price ?? null,
-        sizes: (productToEdit.Size ?? []).map((s) => ({
-          ...s,
-          price: s.price ?? 0,
-        })),
-        extras: (productToEdit.Extras ?? []).map((e) => ({
-          ...e,
-          price: e.price ?? 0,
-        })),
-      };
-      setFormData(editData);
-    } else {
-      setFormData(initialFormState);
+    if (isPriceDisabled) {
+      form.setValue("price", null);
     }
-  }, [productToEdit, initialFormState]);
+  }, [isPriceDisabled, form]);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="max-h-[70vh] overflow-y-auto p-1 pr-4">
-        {/* Seção de Informações */}
-        <h3 className="text-lg font-semibold mb-2">Informações</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Nome do Produto</Label>
-            <Input
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              placeholder="Ex: Pizza de Calabresa"
-            />
-            {errors.name && (
-              <p className="text-sm text-red-500">{errors.name}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="categoryId">Categoria</Label>
-            <NativeSelect
-              id="categoryId"
-              name="categoryId"
-              value={formData.categoryId}
-              onChange={handleInputChange}
-            >
-              <option value="">Selecione uma categoria</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </NativeSelect>
-            {errors.categoryId && (
-              <p className="text-sm text-red-500">{errors.categoryId}</p>
-            )}
-          </div>
-        </div>
-        <div className="space-y-2 mt-4">
-          <Label htmlFor="description">Descrição</Label>
-          <Textarea
-            id="description"
-            name="description"
-            value={formData.description}
-            onChange={handleInputChange}
-            placeholder="Descreva o produto..."
-          />
-          {errors.description && (
-            <p className="text-sm text-red-500">{errors.description}</p>
-          )}
-        </div>
-
-        <Separator className="my-6" />
-
-        <div className="space-y-1.5">
-          <Label htmlFor="image-upload">Imagem do Produto</Label>
-
-          <div className="flex items-center gap-4">
-            <label htmlFor="image-upload" className="flex-1 cursor-pointer">
-              <div className="flex h-20 w-full items-center justify-center rounded-md border-2 border-dashed border-input p-4 text-center text-muted-foreground hover:border-primary">
-                {imageFile ? (
-                  <p className="truncate">{imageFile.name}</p>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {/* Seção da Imagem */}
+        <FormField
+          control={form.control}
+          name="imageUrl"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Imagem do Produto</FormLabel>
+              <div className="flex items-center gap-4">
+                {field.value ? (
+                  <Image
+                    src={field.value}
+                    alt={form.watch("name") || "Imagem do produto"}
+                    width={80}
+                    height={80}
+                    className="rounded-md object-cover"
+                  />
                 ) : (
-                  <div className="flex flex-col items-center gap-1">
-                    <UploadCloud className="h-6 w-6" />
-
-                    <span>Clique para selecionar</span>
+                  <div className="flex h-20 w-20 items-center justify-center rounded-md bg-accent">
+                    <span className="text-sm text-muted-foreground text-center">
+                      Sem imagem
+                    </span>
                   </div>
                 )}
+                <FormControl>
+                  <Input
+                    type="file"
+                    onChange={handleFileChange}
+                    className="w-full"
+                    disabled={isUploading}
+                  />
+                </FormControl>
               </div>
-            </label>
-
-            <Input
-              id="image-upload"
-              type="file"
-              className="sr-only"
-              onChange={handleFileChange}
-              accept="image/png, image/jpeg, image/webp"
-              disabled={isUploading}
-            />
-
-            {formData.imageUrl && (
-              <Image
-                src={formData.imageUrl}
-                alt="Previa da imagem"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                width={60}
-                height={60}
-              />
-            )}
-          </div>
-
-          {errors.imageUrl && (
-            <p className="text-destructive text-sm mt-1">{errors.imageUrl}</p>
+              <FormMessage />
+            </FormItem>
           )}
-        </div>
+        />
 
-        <Separator className="my-6" />
-
-        {/* Seção de Preço */}
-        <h3 className="text-lg font-semibold mb-2">Preço e Desconto</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {!hasSizes && (
-            <div className="space-y-2">
-              <Label htmlFor="price">Preço Base (R$)</Label>
-              <Input
-                id="price"
-                name="price"
-                type="string"
-                placeholder="R$ 0,00"
-                value={
-                  formData.price !== null
-                    ? formatBRL(formData.price)
-                    : formatBRL(0)
-                }
-                onChange={(e) => handleInputChange(e)}
-              />
-              {errors.price && (
-                <p className="text-sm text-red-500">{errors.price}</p>
-              )}
-            </div>
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Nome</FormLabel>
+              <FormControl>
+                <Input placeholder="Nome do produto" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
-          <div className="space-y-2">
-            <Label htmlFor="discount">Desconto (%)</Label>
-            <Input
-              id="discount"
-              name="discount"
-              type="number"
-              min="0"
-              max="100"
-              value={formData.discount}
-              onChange={handleInputChange}
-              placeholder="Ex: 10"
-            />
-            {errors.discount && (
-              <p className="text-sm text-red-500">{errors.discount}</p>
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Descrição</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Descreva o produto"
+                  className="resize-y"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+          <Controller
+            name="price"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Preço Base</FormLabel>
+                <FormControl>
+                  <CurrencyInput
+                    placeholder="R$ 0,00"
+                    value={
+                      typeof field.value === "number" ? field.value : undefined
+                    }
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    ref={field.ref}
+                    name={field.name}
+                    disabled={isPriceDisabled}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-          </div>
+          />
+
+          <FormField
+            control={form.control}
+            name="categoryId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Categoria</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma categoria" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
-
-        <Separator className="my-6" />
-
-        {/* Seção de Configurações */}
-        <h3 className="text-lg font-semibold mb-2">Configurações Adicionais</h3>
-        {selectedCategory?.name.toLowerCase() === "pizzas" && (
-          <div className="flex items-center space-x-2 border p-4 rounded-md">
-            <Checkbox
-              id="isHalfHalf"
-              checked={formData.isHalfHalf}
-              onCheckedChange={handleCheckboxChange}
-            />
-            <Label htmlFor="isHalfHalf">Permitir Meio a Meio</Label>
-          </div>
-        )}
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="discount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Desconto %</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="0"
+                    type="number"
+                    {...field}
+                    value={String(field.value ?? 0)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="isHalfHalf"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-base">
+                    Permitir Meio a Meio
+                  </FormLabel>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
 
         {/* Seção de Tamanhos */}
-        <div className="mt-6">
-          <h4 className="font-semibold">Tamanhos</h4>
-          {(formData.sizes || []).map((size, index) => (
+        <div>
+          <h3 className="mb-4 text-lg font-medium">Tamanhos (opcional)</h3>
+          {sizeFields.map((item, index) => (
             <div
-              key={index}
-              className="flex items-end gap-2 mt-2 p-2 border rounded-md"
+              key={item.id}
+              className="mb-4 grid grid-cols-1 items-start gap-4 rounded-md border p-4 md:grid-cols-[1fr_1fr_auto]"
             >
-              <div className="flex-1 space-y-2">
-                <Label>Nome</Label>
-                <Input
-                  placeholder="Pequeno"
-                  value={size.name}
-                  onChange={(e) =>
-                    handleDynamicListChange(
-                      "sizes",
-                      index,
-                      "name",
-                      e.target.value
-                    )
-                  }
-                />
+              <FormField
+                control={form.control}
+                name={`sizes.${index}.name`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Grande" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Controller
+                name={`sizes.${index}.price`}
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Preço</FormLabel>
+                    <FormControl>
+                      <CurrencyInput
+                        placeholder="R$ 0,00"
+                        value={
+                          typeof field.value === "number"
+                            ? field.value
+                            : undefined
+                        }
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex h-full items-end">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => removeSize(index)}
+                  className="w-full md:w-auto"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Remover
+                </Button>
               </div>
-              <div className="flex-1 space-y-2">
-                <Label>Preço (R$)</Label>
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="R$ 0,00"
-                  value={
-                    typeof size.price === "number"
-                      ? formatBRL(size.price)
-                      : size.price
-                  }
-                  onChange={(e) =>
-                    handleDynamicListChange(
-                      "sizes",
-                      index,
-                      "price",
-                      e.target.value
-                    )
-                  }
-                />
-              </div>
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                onClick={() => removeDynamicListItem("sizes", index)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
             </div>
           ))}
           <Button
@@ -486,64 +422,65 @@ export function ProductForm({
             variant="outline"
             size="sm"
             className="mt-2"
-            onClick={() => addDynamicListItem("sizes")}
+            onClick={() => appendSize({ name: "", price: 0 })}
           >
-            <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Tamanho
+            Adicionar Tamanho
           </Button>
         </div>
 
         {/* Seção de Extras */}
-        <div className="mt-6">
-          <h4 className="font-semibold">Extras</h4>
-          {(formData.extras || []).map((extra, index) => (
+        <div>
+          <h3 className="mb-4 text-lg font-medium">Extras (opcional)</h3>
+          {extraFields.map((item, index) => (
             <div
-              key={index}
-              className="flex items-end gap-2 mt-2 p-2 border rounded-md"
+              key={item.id}
+              className="mb-4 grid grid-cols-1 items-start gap-4 rounded-md border p-4 md:grid-cols-[1fr_1fr_auto]"
             >
-              <div className="flex-1 space-y-2">
-                <Label>Nome</Label>
-                <Input
-                  placeholder="Borda de Catupiry"
-                  value={extra.name}
-                  onChange={(e) =>
-                    handleDynamicListChange(
-                      "extras",
-                      index,
-                      "name",
-                      e.target.value
-                    )
-                  }
-                />
+              <FormField
+                control={form.control}
+                name={`extras.${index}.name`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Bacon" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Controller
+                name={`extras.${index}.price`}
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Preço</FormLabel>
+                    <FormControl>
+                      <CurrencyInput
+                        placeholder="R$ 0,00"
+                        value={
+                          typeof field.value === "number"
+                            ? field.value
+                            : undefined
+                        }
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex h-full items-end">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => removeExtra(index)}
+                  className="w-full md:w-auto"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Remover
+                </Button>
               </div>
-              <div className="flex-1 space-y-2">
-                <Label>Preço (R$)</Label>
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="R$ 0,00"
-                  value={
-                    typeof extra.price === "number"
-                      ? formatBRL(extra.price)
-                      : extra.price
-                  }
-                  onChange={(e) =>
-                    handleDynamicListChange(
-                      "extras",
-                      index,
-                      "price",
-                      e.target.value
-                    )
-                  }
-                />
-              </div>
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                onClick={() => removeDynamicListItem("extras", index)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
             </div>
           ))}
           <Button
@@ -551,15 +488,20 @@ export function ProductForm({
             variant="outline"
             size="sm"
             className="mt-2"
-            onClick={() => addDynamicListItem("extras")}
+            onClick={() => appendExtra({ name: "", price: 0 })}
           >
-            <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Extra
+            Adicionar Extra
           </Button>
         </div>
-      </div>
-      <Button type="submit" disabled={isPending} className="w-full">
-        {isPending ? "Salvando..." : "Salvar Produto"}
-      </Button>
-    </form>
+
+        <Button type="submit" disabled={form.formState.isSubmitting}>
+          {form.formState.isSubmitting
+            ? "Salvando..."
+            : product
+            ? "Salvar Alterações"
+            : "Criar Produto"}
+        </Button>
+      </form>
+    </Form>
   );
 }

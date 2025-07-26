@@ -158,7 +158,7 @@ export const ProductClient = ({ products, categories }: ProductClientProps) => {
         </div>
         <ProductForm
           categories={categories}
-          productToEdit={productToEdit}
+          product={productToEdit}
           onSuccess={handleSuccess}
         />
       </div>

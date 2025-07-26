@@ -51,12 +51,8 @@ export const productSchema = z
       .url("URL da imagem inválida.")
       .min(1, "A imagem é obrigatória."),
     discount: z.preprocess(
-      (val) => (val ? Number(val) : 0),
-      z
-        .number()
-        .min(0, "O desconto não pode ser negativo.")
-        .max(100, "O desconto não pode ser maior que 100.")
-        .default(0)
+      (val) => (val === undefined || val === null ? 0 : Number(val)),
+      z.number().min(0).max(100).default(0)
     ),
     isHalfHalf: z.boolean().default(false),
     price: pricePreprocessor.optional().nullable(),
