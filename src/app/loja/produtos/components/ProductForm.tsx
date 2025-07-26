@@ -1,75 +1,70 @@
 "use client";
 
-import { useState, ChangeEvent, FormEvent } from "react";
+import {
+  useState,
+  ChangeEvent,
+  FormEvent,
+  useEffect,
+  useMemo,
+  useTransition,
+} from "react";
 import { Category } from "@prisma/client";
-import { useRouter } from "next/navigation";
+
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
+
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Separator } from "@/components/ui/separator";
-import { Trash2, PlusCircle, Loader2, UploadCloud } from "lucide-react";
+import { Trash2, PlusCircle, UploadCloud } from "lucide-react";
 import Image from "next/image";
-import { createProduct } from "../actions/product"; // Server Action
+import { createProduct, updateProduct } from "../actions/product"; // Server Action
 import { ProductFormValues, productSchema } from "@/lib/schemas";
+import { ProductWithRelations } from "./ProductClient";
+import { formatBRL, parseBRL } from "@/helpers/currency-format";
 
 interface ProductFormProps {
   categories: Category[];
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  productToEdit?: ProductWithRelations | null;
+  onSuccess: () => void;
 }
 
 type FormErrors = { [key: string]: string | undefined };
 
 export function ProductForm({
   categories,
-  open,
-  onOpenChange,
+  productToEdit,
+  onSuccess,
 }: ProductFormProps) {
-  const initialFormState: ProductFormValues = {
-    name: "",
-    description: "",
-    categoryId: "",
-    imageUrl: "",
-    price: null,
-    discount: 0,
-    isHalfHalf: false,
-    sizes: [],
-    extras: [],
-  };
+  const initialFormState = useMemo<ProductFormValues>(
+    () => ({
+      name: "",
+      description: "",
+      categoryId: "",
+      imageUrl: "",
+      price: null,
+      discount: 0,
+      isHalfHalf: false,
+      sizes: [],
+      extras: [],
+    }),
+    []
+  );
 
   const [formData, setFormData] = useState<ProductFormValues>(initialFormState);
+  const [isPending, startTransition] = useTransition();
   const [errors, setErrors] = useState<FormErrors>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const router = useRouter();
 
   const selectedCategory = categories.find(
     (cat) => cat.id === formData.categoryId
   );
   const hasSizes = formData.sizes && formData.sizes.length > 0;
-
-  const formatToBRL = (value: string): string => {
-    const digitsOnly = value.replace(/\D/g, "");
-    if (!digitsOnly) return "";
-    const numberValue = parseInt(digitsOnly, 10) / 100;
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(numberValue);
-  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -122,29 +117,39 @@ export function ProductForm({
     const { name, value } = e.target;
 
     if (name === "price") {
-      const digitsOnly = value.replace(/\D/g, "");
-      const numberValue = digitsOnly
-        ? parseInt(digitsOnly, 10) / 100
-        : undefined;
-      setFormData((prev) => ({ ...prev, [name]: numberValue }));
-      return;
-    }
-
-    if (name === "categoryId") {
-      const selectedCategory = categories.find((cat) => cat.id === value);
-
-      const shouldBeHalfHalf =
-        selectedCategory?.name.toLowerCase() === "pizzas";
-
       setFormData((prev) => ({
         ...prev,
-        categoryId: value,
-        isHalfHalf: shouldBeHalfHalf,
+        price: parseBRL(value),
       }));
       return;
     }
 
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    // Desconto (%)
+    if (name === "discount") {
+      const discount = Math.min(
+        100,
+        Math.max(0, value ? parseFloat(value) : 0)
+      );
+      setFormData((prev) => ({ ...prev, discount }));
+      return;
+    }
+
+    // Categoria → força meio-a-meio se for pizza
+    if (name === "categoryId") {
+      const selectedCat = categories.find((c) => c.id === value);
+      setFormData((prev) => ({
+        ...prev,
+        categoryId: value,
+
+        isHalfHalf: selectedCat?.name.toLowerCase() === "pizzas",
+      }));
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleCheckboxChange = (checked: boolean) => {
@@ -158,17 +163,23 @@ export function ProductForm({
     value: string
   ) => {
     const newList = [...(formData[listName] || [])];
-    const processedValue = field === "price" ? formatToBRL(value) : value;
-    const currentItem = newList[index] || {};
-    newList[index] = { ...currentItem, [field]: processedValue };
+
+    if (field === "name") {
+      (newList[index] as { name: string; price: number | string }).name = value;
+    } else if (field === "price") {
+      (
+        newList[index] as { name: string; price: number | string | null }
+      ).price = parseBRL(value);
+    }
+
     setFormData((prev) => ({ ...prev, [listName]: newList }));
   };
 
   const addDynamicListItem = (listName: "sizes" | "extras") => {
     setFormData((prev) => ({
       ...prev,
-      price: prev.price && null,
-      [listName]: [...(prev[listName] || []), { name: "", price: "" }],
+      [listName]: [...(prev[listName] || []), { name: "", price: 0 }],
+      price: null,
     }));
   };
 
@@ -200,333 +211,355 @@ export function ProductForm({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
-    setIsSubmitting(true);
 
-    try {
-      await createProduct(formData);
-      toast.success("Produto criado com sucesso!");
-      onOpenChange(false);
-      setFormData(initialFormState);
-      setImageFile(null);
-      setErrors({});
-      router.refresh();
-    } catch (error) {
-      toast.error(
-        (error as Error).message || "Ocorreu um erro ao criar o produto."
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+    startTransition(async () => {
+      const result = productToEdit
+        ? await updateProduct(productToEdit.id, {
+            ...formData,
+            price: formData.price === 0 || null ? null : formData.price,
+            extras:
+              formData.extras && formData.extras.length > 0
+                ? formData.extras.map((extra) => ({
+                    ...extra,
+                    price: Number(extra.price),
+                  }))
+                : [],
+          })
+        : await createProduct({
+            ...formData,
+            price: formData.price === 0 || null ? null : formData.price,
+            extras:
+              formData.extras && formData.extras.length > 0
+                ? formData.extras.map((extra) => ({
+                    ...extra,
+                    price: Number(extra.price),
+                  }))
+                : [],
+          });
+
+      if (result.success) {
+        toast.success(result.message);
+        onSuccess();
+      } else {
+        toast.error(result.message);
+      }
+    });
   };
 
+  useEffect(() => {
+    if (productToEdit) {
+      const editData = {
+        name: productToEdit.name,
+        description: productToEdit.description ?? "",
+        categoryId: productToEdit.categoryId,
+        imageUrl: productToEdit.imageUrl ?? "",
+        discount: productToEdit.discount ?? 0,
+        isHalfHalf: productToEdit.isHalfHalf ?? false,
+        price: productToEdit.price ?? null,
+        sizes: (productToEdit.Size ?? []).map((s) => ({
+          ...s,
+          price: s.price ?? 0,
+        })),
+        extras: (productToEdit.Extras ?? []).map((e) => ({
+          ...e,
+          price: e.price ?? 0,
+        })),
+      };
+      setFormData(editData);
+    } else {
+      setFormData(initialFormState);
+    }
+  }, [productToEdit, initialFormState]);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>Adicionar Novo Produto</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="max-h-[70vh] overflow-y-auto p-1 pr-4">
-            {/* Seção de Informações */}
-            <h3 className="text-lg font-semibold mb-2">Informações</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome do Produto</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  placeholder="Ex: Pizza de Calabresa"
-                />
-                {errors.name && (
-                  <p className="text-sm text-red-500">{errors.name}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="categoryId">Categoria</Label>
-                <NativeSelect
-                  id="categoryId"
-                  name="categoryId"
-                  value={formData.categoryId}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Selecione uma categoria</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </NativeSelect>
-                {errors.categoryId && (
-                  <p className="text-sm text-red-500">{errors.categoryId}</p>
-                )}
-              </div>
-            </div>
-            <div className="space-y-2 mt-4">
-              <Label htmlFor="description">Descrição</Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                placeholder="Descreva o produto..."
-              />
-              {errors.description && (
-                <p className="text-sm text-red-500">{errors.description}</p>
-              )}
-            </div>
-
-            <Separator className="my-6" />
-
-            <div className="space-y-1.5">
-              <Label htmlFor="image-upload">Imagem do Produto</Label>
-
-              <div className="flex items-center gap-4">
-                <label htmlFor="image-upload" className="flex-1 cursor-pointer">
-                  <div className="flex h-20 w-full items-center justify-center rounded-md border-2 border-dashed border-input p-4 text-center text-muted-foreground hover:border-primary">
-                    {imageFile ? (
-                      <p className="truncate">{imageFile.name}</p>
-                    ) : (
-                      <div className="flex flex-col items-center gap-1">
-                        <UploadCloud className="h-6 w-6" />
-
-                        <span>Clique para selecionar</span>
-                      </div>
-                    )}
-                  </div>
-                </label>
-
-                <Input
-                  id="image-upload"
-                  type="file"
-                  className="sr-only"
-                  onChange={handleFileChange}
-                  accept="image/png, image/jpeg, image/webp"
-                  disabled={isUploading}
-                />
-
-                {formData.imageUrl && (
-                  <Image
-                    src={formData.imageUrl}
-                    alt="Previa da imagem"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    width={60}
-                    height={60}
-                  />
-                )}
-              </div>
-
-              {errors.imageUrl && (
-                <p className="text-destructive text-sm mt-1">
-                  {errors.imageUrl}
-                </p>
-              )}
-            </div>
-
-            <Separator className="my-6" />
-
-            {/* Seção de Preço */}
-            <h3 className="text-lg font-semibold mb-2">Preço e Desconto</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {!hasSizes && (
-                <div className="space-y-2">
-                  <Label htmlFor="price">Preço Base (R$)</Label>
-                  <Input
-                    id="price"
-                    name="price"
-                    type="text"
-                    value={
-                      formData.price !== undefined
-                        ? formatToBRL(String(formData.price))
-                        : ""
-                    }
-                    onChange={handleInputChange}
-                    placeholder="R$ 0,00"
-                  />
-                  {errors.price && (
-                    <p className="text-sm text-red-500">{errors.price}</p>
-                  )}
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="discount">Desconto (%)</Label>
-                <Input
-                  id="discount"
-                  name="discount"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={formData.discount}
-                  onChange={handleInputChange}
-                  placeholder="Ex: 10"
-                />
-                {errors.discount && (
-                  <p className="text-sm text-red-500">{errors.discount}</p>
-                )}
-              </div>
-            </div>
-
-            <Separator className="my-6" />
-
-            {/* Seção de Configurações */}
-            <h3 className="text-lg font-semibold mb-2">
-              Configurações Adicionais
-            </h3>
-            {selectedCategory?.name.toLowerCase() === "pizzas" && (
-              <div className="flex items-center space-x-2 border p-4 rounded-md">
-                <Checkbox
-                  id="isHalfHalf"
-                  checked={formData.isHalfHalf}
-                  onCheckedChange={handleCheckboxChange}
-                />
-                <Label htmlFor="isHalfHalf">Permitir Meio a Meio</Label>
-              </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="max-h-[70vh] overflow-y-auto p-1 pr-4">
+        {/* Seção de Informações */}
+        <h3 className="text-lg font-semibold mb-2">Informações</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Nome do Produto</Label>
+            <Input
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              placeholder="Ex: Pizza de Calabresa"
+            />
+            {errors.name && (
+              <p className="text-sm text-red-500">{errors.name}</p>
             )}
-
-            {/* Seção de Tamanhos */}
-            <div className="mt-6">
-              <h4 className="font-semibold">Tamanhos</h4>
-              {(formData.sizes || []).map((size, index) => (
-                <div
-                  key={index}
-                  className="flex items-end gap-2 mt-2 p-2 border rounded-md"
-                >
-                  <div className="flex-1 space-y-2">
-                    <Label>Nome</Label>
-                    <Input
-                      placeholder="Pequeno"
-                      value={size.name}
-                      onChange={(e) =>
-                        handleDynamicListChange(
-                          "sizes",
-                          index,
-                          "name",
-                          e.target.value
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <Label>Preço (R$)</Label>
-                    <Input
-                      name="price"
-                      placeholder="R$ 0,00"
-                      value={size.price || ""}
-                      onChange={(e) =>
-                        handleDynamicListChange(
-                          "sizes",
-                          index,
-                          "price",
-                          e.target.value
-                        )
-                      }
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    onClick={() => removeDynamicListItem("sizes", index)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-2"
-                onClick={() => addDynamicListItem("sizes")}
-              >
-                <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Tamanho
-              </Button>
-            </div>
-
-            {/* Seção de Extras */}
-            <div className="mt-6">
-              <h4 className="font-semibold">Extras</h4>
-              {(formData.extras || []).map((extra, index) => (
-                <div
-                  key={index}
-                  className="flex items-end gap-2 mt-2 p-2 border rounded-md"
-                >
-                  <div className="flex-1 space-y-2">
-                    <Label>Nome</Label>
-                    <Input
-                      placeholder="Borda de Catupiry"
-                      value={extra.name}
-                      onChange={(e) =>
-                        handleDynamicListChange(
-                          "extras",
-                          index,
-                          "name",
-                          e.target.value
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <Label>Preço (R$)</Label>
-                    <Input
-                      name="price"
-                      placeholder="R$ 0,00"
-                      value={extra.price || ""}
-                      onChange={(e) =>
-                        handleDynamicListChange(
-                          "extras",
-                          index,
-                          "price",
-                          e.target.value
-                        )
-                      }
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    onClick={() => removeDynamicListItem("extras", index)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-2"
-                onClick={() => addDynamicListItem("extras")}
-              >
-                <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Extra
-              </Button>
-            </div>
           </div>
-          <DialogFooter className="pt-6">
-            <DialogClose asChild>
+          <div className="space-y-2">
+            <Label htmlFor="categoryId">Categoria</Label>
+            <NativeSelect
+              id="categoryId"
+              name="categoryId"
+              value={formData.categoryId}
+              onChange={handleInputChange}
+            >
+              <option value="">Selecione uma categoria</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </NativeSelect>
+            {errors.categoryId && (
+              <p className="text-sm text-red-500">{errors.categoryId}</p>
+            )}
+          </div>
+        </div>
+        <div className="space-y-2 mt-4">
+          <Label htmlFor="description">Descrição</Label>
+          <Textarea
+            id="description"
+            name="description"
+            value={formData.description}
+            onChange={handleInputChange}
+            placeholder="Descreva o produto..."
+          />
+          {errors.description && (
+            <p className="text-sm text-red-500">{errors.description}</p>
+          )}
+        </div>
+
+        <Separator className="my-6" />
+
+        <div className="space-y-1.5">
+          <Label htmlFor="image-upload">Imagem do Produto</Label>
+
+          <div className="flex items-center gap-4">
+            <label htmlFor="image-upload" className="flex-1 cursor-pointer">
+              <div className="flex h-20 w-full items-center justify-center rounded-md border-2 border-dashed border-input p-4 text-center text-muted-foreground hover:border-primary">
+                {imageFile ? (
+                  <p className="truncate">{imageFile.name}</p>
+                ) : (
+                  <div className="flex flex-col items-center gap-1">
+                    <UploadCloud className="h-6 w-6" />
+
+                    <span>Clique para selecionar</span>
+                  </div>
+                )}
+              </div>
+            </label>
+
+            <Input
+              id="image-upload"
+              type="file"
+              className="sr-only"
+              onChange={handleFileChange}
+              accept="image/png, image/jpeg, image/webp"
+              disabled={isUploading}
+            />
+
+            {formData.imageUrl && (
+              <Image
+                src={formData.imageUrl}
+                alt="Previa da imagem"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                width={60}
+                height={60}
+              />
+            )}
+          </div>
+
+          {errors.imageUrl && (
+            <p className="text-destructive text-sm mt-1">{errors.imageUrl}</p>
+          )}
+        </div>
+
+        <Separator className="my-6" />
+
+        {/* Seção de Preço */}
+        <h3 className="text-lg font-semibold mb-2">Preço e Desconto</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {!hasSizes && (
+            <div className="space-y-2">
+              <Label htmlFor="price">Preço Base (R$)</Label>
+              <Input
+                id="price"
+                name="price"
+                type="string"
+                placeholder="R$ 0,00"
+                value={
+                  formData.price !== null
+                    ? formatBRL(formData.price)
+                    : formatBRL(0)
+                }
+                onChange={(e) => handleInputChange(e)}
+              />
+              {errors.price && (
+                <p className="text-sm text-red-500">{errors.price}</p>
+              )}
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="discount">Desconto (%)</Label>
+            <Input
+              id="discount"
+              name="discount"
+              type="number"
+              min="0"
+              max="100"
+              value={formData.discount}
+              onChange={handleInputChange}
+              placeholder="Ex: 10"
+            />
+            {errors.discount && (
+              <p className="text-sm text-red-500">{errors.discount}</p>
+            )}
+          </div>
+        </div>
+
+        <Separator className="my-6" />
+
+        {/* Seção de Configurações */}
+        <h3 className="text-lg font-semibold mb-2">Configurações Adicionais</h3>
+        {selectedCategory?.name.toLowerCase() === "pizzas" && (
+          <div className="flex items-center space-x-2 border p-4 rounded-md">
+            <Checkbox
+              id="isHalfHalf"
+              checked={formData.isHalfHalf}
+              onCheckedChange={handleCheckboxChange}
+            />
+            <Label htmlFor="isHalfHalf">Permitir Meio a Meio</Label>
+          </div>
+        )}
+
+        {/* Seção de Tamanhos */}
+        <div className="mt-6">
+          <h4 className="font-semibold">Tamanhos</h4>
+          {(formData.sizes || []).map((size, index) => (
+            <div
+              key={index}
+              className="flex items-end gap-2 mt-2 p-2 border rounded-md"
+            >
+              <div className="flex-1 space-y-2">
+                <Label>Nome</Label>
+                <Input
+                  placeholder="Pequeno"
+                  value={size.name}
+                  onChange={(e) =>
+                    handleDynamicListChange(
+                      "sizes",
+                      index,
+                      "name",
+                      e.target.value
+                    )
+                  }
+                />
+              </div>
+              <div className="flex-1 space-y-2">
+                <Label>Preço (R$)</Label>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="R$ 0,00"
+                  value={
+                    typeof size.price === "number"
+                      ? formatBRL(size.price)
+                      : size.price
+                  }
+                  onChange={(e) =>
+                    handleDynamicListChange(
+                      "sizes",
+                      index,
+                      "price",
+                      e.target.value
+                    )
+                  }
+                />
+              </div>
               <Button
                 type="button"
-                variant="outline"
-                onClick={() => {
-                  setFormData(initialFormState);
-                  setImageFile(null);
-                  setErrors({});
-                }}
+                variant="destructive"
+                size="icon"
+                onClick={() => removeDynamicListItem("sizes", index)}
               >
-                Cancelar
+                <Trash2 className="h-4 w-4" />
               </Button>
-            </DialogClose>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              Salvar Produto
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() => addDynamicListItem("sizes")}
+          >
+            <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Tamanho
+          </Button>
+        </div>
+
+        {/* Seção de Extras */}
+        <div className="mt-6">
+          <h4 className="font-semibold">Extras</h4>
+          {(formData.extras || []).map((extra, index) => (
+            <div
+              key={index}
+              className="flex items-end gap-2 mt-2 p-2 border rounded-md"
+            >
+              <div className="flex-1 space-y-2">
+                <Label>Nome</Label>
+                <Input
+                  placeholder="Borda de Catupiry"
+                  value={extra.name}
+                  onChange={(e) =>
+                    handleDynamicListChange(
+                      "extras",
+                      index,
+                      "name",
+                      e.target.value
+                    )
+                  }
+                />
+              </div>
+              <div className="flex-1 space-y-2">
+                <Label>Preço (R$)</Label>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="R$ 0,00"
+                  value={
+                    typeof extra.price === "number"
+                      ? formatBRL(extra.price)
+                      : extra.price
+                  }
+                  onChange={(e) =>
+                    handleDynamicListChange(
+                      "extras",
+                      index,
+                      "price",
+                      e.target.value
+                    )
+                  }
+                />
+              </div>
+              <Button
+                type="button"
+                variant="destructive"
+                size="icon"
+                onClick={() => removeDynamicListItem("extras", index)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() => addDynamicListItem("extras")}
+          >
+            <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Extra
+          </Button>
+        </div>
+      </div>
+      <Button type="submit" disabled={isPending} className="w-full">
+        {isPending ? "Salvando..." : "Salvar Produto"}
+      </Button>
+    </form>
   );
 }

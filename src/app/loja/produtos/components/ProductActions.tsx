@@ -1,78 +1,51 @@
 "use client";
 
-import { useState } from "react";
-import { Category, Product, Size, Extra } from "@prisma/client";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import { toast } from "sonner";
+import { Product } from "@prisma/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { toggleProductStatus } from "../actions/product";
-import { useRouter } from "next/navigation";
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { useState, useTransition } from "react";
 
-type ProductWithDetails = Product & {
-  category: Category;
-  Size: Size[];
-  Extras: Extra[];
-};
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ProductActionsProps {
-  product: ProductWithDetails;
-  categories: Category[];
+  product: Product;
+  onEdit: () => void; // Prop para a função de edição
 }
 
-export function ProductActions({ product }: ProductActionsProps) {
-  const [isActive, setIsActive] = useState(product.isActive);
-  const router = useRouter();
+export const ProductActions = ({ product, onEdit }: ProductActionsProps) => {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  const handleStatusToggle = async () => {
-    const newStatus = !isActive;
-    setIsActive(newStatus);
-
-    toast.promise(toggleProductStatus(product.id, !newStatus), {
-      loading: "Alterando status...",
-      success: () => {
-        router.refresh();
-        return `Produto ${newStatus ? "ativado" : "desativado"} com sucesso.`;
-      },
-      error: (err) => {
-        setIsActive(!newStatus); // Reverte em caso de erro
-        return (
-          (err as Error).message || "Falha ao alterar o status do produto."
-        );
-      },
+  /* const handleDelete = () => {
+    startTransition(async () => {
+      const result = await deleteProduct(product.id);
+      if (result.success) {
+        toast.success(result.message);
+        setIsDeleteDialogOpen(false);
+      } else {
+        toast.error(result.message);
+      }
     });
-  };
-
-  const handleDelete = () => {
-    toast.info("Funcionalidade de exclusão a ser implementada.");
-  };
-
-  const handleEdit = () => {
-    // A lógica para abrir o formulário de edição, possivelmente em um modal, viria aqui.
-    // Ex: openEditModal(product)
-    toast.info("Funcionalidade de edição a ser implementada.");
-  };
+  }; */
 
   return (
-    <div className="flex items-center justify-end gap-2">
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground hidden sm:inline">
-          {isActive ? "Ativo" : "Inativo"}
-        </span>
-        <Switch
-          checked={isActive}
-          onCheckedChange={handleStatusToggle}
-          aria-label="Ativar ou desativar produto"
-        />
-      </div>
+    <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="h-8 w-8 p-0">
@@ -81,21 +54,44 @@ export function ProductActions({ product }: ProductActionsProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Ações</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleEdit}>
+          {/* Aciona a função onEdit ao clicar */}
+          <DropdownMenuItem onClick={onEdit}>
             <Pencil className="mr-2 h-4 w-4" />
             Editar
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={handleDelete}
-            className="text-destructive focus:text-destructive"
+            onClick={() => setIsDeleteDialogOpen(true)}
+            className="text-red-500 hover:!text-red-500"
           >
             <Trash2 className="mr-2 h-4 w-4" />
             Excluir
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    </div>
+
+      {/* AlertDialog para confirmação de exclusão */}
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Essa ação não pode ser desfeita. Isso excluirá permanentemente o
+              produto.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              /* onClick={handleDelete} */ disabled={isPending}
+            >
+              {isPending ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
-}
+};

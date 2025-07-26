@@ -5,20 +5,30 @@ export default function currencyFormat(value: number) {
   }).format(value);
 }
 
-export const formatBRL = (value: number | string): string => {
+export function formatBRL(value: number | undefined | null): string {
+  if (value === null || value === undefined) {
+    return "";
+  }
   const numericValue = typeof value === "string" ? parseFloat(value) : value;
-  if (isNaN(numericValue)) return "";
+
+  if (isNaN(numericValue)) {
+    return "";
+  }
+
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
-    minimumFractionDigits: 2,
   }).format(numericValue);
-};
+}
 
-// Desformata um valor BRL para número (ex.: "R$ 12,34" -> 12.34)
-export const parseBRL = (value: string): string => {
-  // Remove tudo que não é número, vírgula ou ponto
-  const cleaned = value.replace(/[^0-9,.]/g, "");
-  // Converte para formato numérico (ex.: "12,34" -> "12.34")
-  return cleaned.replace(",", ".");
-};
+export function parseBRL(value: string): number | null {
+  if (!value) return null;
+
+  const cleaned = value.replace(/[^\d,]/g, "").replace(",", ".");
+
+  if (cleaned === "") return null;
+
+  const parsed = parseFloat(cleaned);
+
+  return isNaN(parsed) ? null : parsed;
+}

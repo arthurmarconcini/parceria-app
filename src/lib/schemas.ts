@@ -15,17 +15,30 @@ export const registerFormSchema = z
 
 export type RegisterFormValues = z.infer<typeof registerFormSchema>;
 
-const itemSchema = z.object({
+const pricePreprocessor = z.preprocess((val) => {
+  if (typeof val === "string") {
+    if (!val.trim()) return undefined;
+
+    const cleaned = val.replace(/[^\d,]/g, "").replace(",", ".");
+    const parsed = parseFloat(cleaned);
+    return isNaN(parsed) ? undefined : parsed;
+  }
+
+  if (typeof val === "number") {
+    return val;
+  }
+
+  return undefined;
+}, z.number().positive("O preço deve ser um número positivo."));
+
+// Schema para itens dinâmicos (Tamanhos e Extras)
+export const itemSchema = z.object({
+  id: z.string().optional(),
   name: z.string().min(1, "O nome é obrigatório."),
-  price: z.preprocess(
-    (val) =>
-      val ? Number(String(val).replace(/[^0-9]/g, "")) / 100 : undefined,
-    z
-      .number({ required_error: "O preço é obrigatório." })
-      .positive("O preço deve ser positivo.")
-  ),
+  price: pricePreprocessor,
 });
 
+// Schema principal do produto
 export const productSchema = z
   .object({
     name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres."),
@@ -46,24 +59,20 @@ export const productSchema = z
         .default(0)
     ),
     isHalfHalf: z.boolean().default(false),
-    price: z.preprocess(
-      (val) =>
-        val ? Number(String(val).replace(/[^0-9]/g, "")) / 100 : undefined,
-      z.number().positive("O preço deve ser positivo.").optional().nullable()
-    ),
+    price: pricePreprocessor.optional().nullable(),
     sizes: z.array(itemSchema).optional(),
     extras: z.array(itemSchema).optional(),
   })
   .superRefine((data, ctx) => {
-    // REGRA 1: Se o produto TEM variações de tamanho...
     if (data.sizes && data.sizes.length > 0) {
-      // MODIFICAÇÃO PRINCIPAL: O preço base DEVE ser nulo.
-      // Esta linha transforma o valor para `null` antes da validação final.
-      data.price = null;
-    }
-    // REGRA 2: Se o produto NÃO TEM variações de tamanho...
-    else {
-      // MANTIDO: O preço base é OBRIGATÓRIO e deve ser um número positivo.
+      if (data.price !== null && data.price !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["price"],
+          message: "O preço base deve ser vazio se o produto tiver tamanhos.",
+        });
+      }
+    } else {
       if (data.price === undefined || data.price === null) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
