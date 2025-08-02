@@ -307,6 +307,7 @@ export const ProductClient = ({
               sizes={produtoDaPagina.Size}
               selectedSize={selectedSizeId}
               onSizeChange={setSelectedSizeId}
+              discount={produtoDaPagina.discount || 0}
               title={
                 isPizzaCategory && isHalfHalfMode
                   ? "1. Escolha o tamanho"

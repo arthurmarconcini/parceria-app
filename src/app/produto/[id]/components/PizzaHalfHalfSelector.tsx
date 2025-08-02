@@ -118,10 +118,6 @@ const PizzaHalfHalfSelector = ({
               {pizzas
                 .filter((p) => p.id !== productPagePizza.id)
                 .map((pizza) => {
-                  const price = getPriceForPizzaAndSize(
-                    pizza.id,
-                    selectedSizeName
-                  );
                   return (
                     <SelectItem
                       key={pizza.id}
@@ -129,9 +125,6 @@ const PizzaHalfHalfSelector = ({
                       disabled={!selectedSizeName}
                     >
                       {pizza.name}
-                      {selectedSizeName &&
-                        price !== null &&
-                        ` - ${currencyFormat(price)}`}
                     </SelectItem>
                   );
                 })}

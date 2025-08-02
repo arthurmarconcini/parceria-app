@@ -20,6 +20,7 @@ import { Input } from "../ui/input";
 
 import { Locality, Address } from "@prisma/client";
 import { toast } from "sonner";
+import { useStoreStatus } from "@/hooks/use-store-status";
 
 type AddressWithLocality = Address & { locality: Locality | null };
 
@@ -39,6 +40,7 @@ const Cart = () => {
   const [cep, setCep] = useState("");
   const [localities, setLocalities] = useState<Locality[]>([]);
   const [isLoadingLocalities, setIsLoadingLocalities] = useState(true);
+  const { isOpen } = useStoreStatus();
 
   useEffect(() => {
     setIsLoadingLocalities(true);
@@ -284,10 +286,10 @@ const Cart = () => {
                 size="lg"
                 disabled={
                   cart.length === 0 ||
-                  (!shippingInfo && session?.user === undefined)
+                  (!shippingInfo && session?.user === undefined && !isOpen)
                 }
               >
-                Finalizar Compra
+                {!isOpen ? "Loja Fechada" : "Finalizar Compra"}
               </Button>
             </div>
           </>

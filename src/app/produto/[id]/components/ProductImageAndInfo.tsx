@@ -2,25 +2,23 @@
 
 import Image from "next/image";
 import currencyFormat from "@/helpers/currency-format";
-import { Product, Size } from "@prisma/client"; // Usaremos um tipo mais genérico aqui
+import { Product, Size } from "@prisma/client";
 
 interface ProductImageAndInfoProps {
   product: Pick<
     Product,
     "imageUrl" | "name" | "description" | "price" | "discount"
   > & {
-    // Incluir a categoria para determinar se é pizza e se o preço deve ser exibido
-    category?: { name: string }; // Opcional, mas útil
-    Size?: Size[]; // Para verificar se há tamanhos e não exibir preço fixo
+    category?: { name: string };
+    Size?: Size[];
   };
-  isPizzaCategory: boolean; // Adicionado para lógica de exibição de preço
+  isPizzaCategory: boolean;
 }
 
 const ProductImageAndInfo = ({
   product,
   isPizzaCategory,
 }: ProductImageAndInfoProps) => {
-  // Não exibe preço fixo se for pizza ou se tiver tamanhos configuráveis
   const shouldDisplayFixedPrice =
     !isPizzaCategory &&
     (!product.Size || product.Size.length === 0) &&
@@ -45,7 +43,7 @@ const ProductImageAndInfo = ({
         {product.description && (
           <p className="text-sm text-muted-foreground">{product.description}</p>
         )}
-        {shouldDisplayFixedPrice && (
+        {shouldDisplayFixedPrice ? (
           <p className="text-xl font-semibold text-primary">
             {currencyFormat(
               product.price! * (1 - (product.discount || 0) / 100)
@@ -55,6 +53,23 @@ const ProductImageAndInfo = ({
                 {currencyFormat(product.price!)}
               </span>
             )}
+          </p>
+        ) : (
+          <p className="text-xl font-semibold text-primary">
+            a partir de{" "}
+            {product.Size &&
+              product.Size.length > 0 &&
+              currencyFormat(
+                product.Size[0].price * (1 - (product.discount || 0) / 100)
+              )}
+            {product.discount &&
+              product.discount > 0 &&
+              product.Size &&
+              product.Size.length > 0 && (
+                <span className="ml-2 text-sm line-through text-muted-foreground">
+                  {currencyFormat(product.Size[0].price)}
+                </span>
+              )}
           </p>
         )}
       </div>

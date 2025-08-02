@@ -1,7 +1,7 @@
 "use client";
 
 import { PaymentMethod, Prisma, RestaurantCity } from "@prisma/client";
-import { useRouter } from "next/navigation";
+import { redirect, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useCartStore } from "@/hooks/cartStore";
@@ -13,6 +13,7 @@ import { GuestAddressForm } from "./GuestAddressForm";
 import { AddressSelection } from "./AddressSelection";
 import { OrderSummary } from "./OrderSummary";
 import { PaymentMethods } from "./PaymentMethods";
+import { useStoreStatus } from "@/hooks/use-store-status";
 
 // Tipos
 export type UserPayload = {
@@ -55,6 +56,7 @@ export default function CheckoutClient({
 }: CheckoutClientProps) {
   const router = useRouter();
   const { cart, getTotalPrice, clearCart } = useCartStore();
+  const { isOpen } = useStoreStatus();
 
   const [isGuest] = useState(!user);
   const [addresses, setAddresses] =
@@ -115,7 +117,6 @@ export default function CheckoutClient({
     setIsSubmitting(true);
     setError(null);
 
-    // Validações
     if (cart.length === 0) {
       setError("Seu carrinho está vazio.");
       setIsSubmitting(false);
@@ -212,6 +213,10 @@ export default function CheckoutClient({
     }
   };
 
+  if (!isOpen) {
+    return redirect("/");
+  }
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -272,12 +277,16 @@ export default function CheckoutClient({
           type="submit"
           className="w-full"
           size="lg"
-          disabled={isSubmitting || cart.length === 0}
+          disabled={isSubmitting || cart.length === 0 || !isOpen}
         >
-          {isSubmitting ? (
-            <Loader2 className="animate-spin" />
+          {isOpen ? (
+            isSubmitting ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              `Finalizar Pedido (${currencyFormat(finalTotal)})`
+            )
           ) : (
-            `Finalizar Pedido (${currencyFormat(finalTotal)})`
+            "Loja Fechada"
           )}
         </Button>
       </div>

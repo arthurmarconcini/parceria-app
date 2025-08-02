@@ -14,22 +14,44 @@ interface SizeSelectorProps {
   onSizeChange: (sizeId: string) => void;
   title?: string;
   description?: string;
+  discount?: number;
 }
 
 const sizeOrderMap: { [key: string]: number } = {
   BROTO: 0,
+  BROTINHO: 0,
+  brotinho: 0,
+  B: 0,
+  b: 0,
+  MINI: 0,
   P: 1,
+  p: 1,
+  PEQUENO: 1,
+  pequeno: 1,
   PEQUENA: 1,
+  pequena: 1,
   M: 2,
+  m: 2,
   MÉDIA: 2,
   MEDIA: 2,
+  media: 2,
+  MÉDIO: 2,
+  MEDIO: 2,
+  medio: 2,
   G: 3,
+  g: 3,
   GRANDE: 3,
+  grande: 3,
   GG: 4,
+  gg: 4,
+  giga: 4,
   GIGA: 4,
   GIGANTE: 4,
+  gigante: 4,
   FAMÍLIA: 5,
   FAMILIA: 5,
+  familia: 5,
+  família: 5,
 };
 
 const SizeSelector = ({
@@ -38,6 +60,7 @@ const SizeSelector = ({
   onSizeChange,
   title = "Selecione o tamanho",
   description,
+  discount = 0,
 }: SizeSelectorProps) => {
   if (!sizes || sizes.length === 0) {
     return null;
@@ -92,7 +115,12 @@ const SizeSelector = ({
               </div>
               <div className="flex items-center gap-2 ml-2">
                 <span className="font-semibold text-sm text-foreground">
-                  {currencyFormat(size.price)}
+                  {discount > 0 && (
+                    <span className="line-through text-muted-foreground text-xs mr-1">
+                      {currencyFormat(size.price)}
+                    </span>
+                  )}
+                  {currencyFormat(size.price * (1 - discount / 100))}
                 </span>
                 <RadioGroupItem
                   value={size.id}
