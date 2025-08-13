@@ -19,6 +19,9 @@ export default async function Home() {
         include: {
           Size: true,
         },
+        orderBy: {
+          discount: { sort: "desc", nulls: "last" },
+        },
       },
     },
   });
@@ -30,11 +33,15 @@ export default async function Home() {
       },
       isActive: true,
       price: {
-        not: null, // Apenas produtos com preço base podem ter desconto direto
+        not: null,
       },
     },
     include: {
       Size: true,
+    },
+
+    orderBy: {
+      discount: "desc",
     },
   });
 

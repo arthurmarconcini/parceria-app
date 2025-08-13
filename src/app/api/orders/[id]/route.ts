@@ -12,7 +12,7 @@ export async function GET(
   const order = await db.order.findUnique({
     where: { id: params.id },
     include: {
-      user: { select: { name: true } },
+      user: { select: { name: true, phone: true } },
       address: { include: { locality: true } },
       items: {
         include: {

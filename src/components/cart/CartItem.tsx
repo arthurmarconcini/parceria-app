@@ -32,9 +32,7 @@ const CartItem = ({ item }: CartItemProps) => {
         <div className="flex flex-col gap-2">
           <div>
             <h1 className="font-semibold text-xs line-clamp-2">{item.name}</h1>
-            <h2 className="text-xs text-muted-foreground line-clamp-1">
-              Carne artesanal da casa, Salada, Queijo e Bacon
-            </h2>
+            <h2 className="text-xs text-muted-foreground line-clamp-1">{}</h2>
           </div>
 
           <span className="text-xs text-orange-400 font-semibold">

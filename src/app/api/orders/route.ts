@@ -16,14 +16,14 @@ export async function POST(req: NextRequest) {
     userId,
     guestName,
     guestPhone,
-    address, // Para convidados
-    addressId, // 1. Receber o addressId para usuários logados
+    address,
+    addressId,
     total,
     paymentMethod,
     requiresChange,
     changeFor,
     items,
-    deliveryFee, // Certifique-se de que deliveryFee está sendo recebido
+    deliveryFee,
   } = await req.json();
 
   if (!userId && (!guestName || !guestPhone)) {
@@ -36,7 +36,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 2. Modificar a validação para aceitar 'address' OU 'addressId'
   if ((!address && !addressId) || !total || !paymentMethod) {
     return NextResponse.json(
       {
@@ -95,9 +94,7 @@ export async function POST(req: NextRequest) {
   try {
     let finalAddressId: string;
 
-    // 3. Lógica condicional para o endereço
     if (userId && addressId) {
-      // Para usuário logado, apenas usamos o ID do endereço existente.
       finalAddressId = addressId;
     } else if (!userId && address) {
       // Para convidado, criamos um novo endereço.
@@ -123,13 +120,13 @@ export async function POST(req: NextRequest) {
       data: {
         orderNumber,
         total,
-        deliveryFee, // Incluir a taxa de entrega
-        isDelivery: true, // Assumindo que todos os pedidos são para entrega
+        deliveryFee,
+        isDelivery: true,
         paymentMethod: paymentMethod as PaymentMethod,
         requiresChange: paymentMethod === "CASH" ? requiresChange : null,
         changeFor:
           paymentMethod === "CASH" && requiresChange ? changeFor : null,
-        addressId: finalAddressId, // 4. Usar o ID do endereço final (novo ou existente)
+        addressId: finalAddressId, //
         isGuestOrder: !userId,
         ...(userId
           ? { userId: userId }
@@ -158,44 +155,34 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const itemPromises = items.map(
-      async (
-        item: Prisma.OrderItemGetPayload<{
-          include: {
-            HalfHalf: true;
-            orderExtras: true;
-          };
-        }>,
-        index: number
-      ) => {
-        const createdOrderItem = order.items[index];
+    const itemPromises = items.map(async (item: any, index: number) => {
+      const createdOrderItem = order.items[index];
 
-        if (
-          item.HalfHalf &&
-          item.HalfHalf.firstHalfId &&
-          item.HalfHalf.secondHalfId
-        ) {
-          await db.halfHalf.create({
-            data: {
-              orderItemId: createdOrderItem.id,
-              firstHalfId: item.HalfHalf.firstHalfId,
-              secondHalfId: item.HalfHalf.secondHalfId,
-            },
-          });
-        }
-
-        if (item.orderExtras && item.orderExtras.length > 0) {
-          await db.orderExtra.createMany({
-            data: item.orderExtras.map((extra: OrderExtra) => ({
-              orderItemId: createdOrderItem.id,
-              extraId: extra.extraId,
-              quantity: extra.quantity,
-              priceAtTime: extra.priceAtTime,
-            })),
-          });
-        }
+      if (
+        item.halfhalf &&
+        item.halfhalf.firstHalf?.id &&
+        item.halfhalf.secondHalf?.id
+      ) {
+        await db.halfHalf.create({
+          data: {
+            orderItemId: createdOrderItem.id,
+            firstHalfId: item.halfhalf.firstHalf.id,
+            secondHalfId: item.halfhalf.secondHalf.id,
+          },
+        });
       }
-    );
+
+      if (item.orderExtras && item.orderExtras.length > 0) {
+        await db.orderExtra.createMany({
+          data: item.orderExtras.map((extra: OrderExtra) => ({
+            orderItemId: createdOrderItem.id,
+            extraId: extra.extraId,
+            quantity: extra.quantity,
+            priceAtTime: extra.priceAtTime,
+          })),
+        });
+      }
+    });
 
     await Promise.all(itemPromises);
 
@@ -242,7 +229,7 @@ export async function GET() {
         },
       },
       include: {
-        user: { select: { name: true, email: true, id: true } },
+        user: { select: { name: true, email: true, id: true, phone: true } },
         address: { include: { locality: true } },
         items: {
           include: {

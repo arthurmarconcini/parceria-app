@@ -1,15 +1,13 @@
-// Arquivo: src/app/loja/gestor/components/PrintOrderReceipt.tsx
 "use client";
 
 import { useRef } from "react";
 import { useReactToPrint } from "react-to-print";
 import { Printer } from "lucide-react";
-// Importe o tipo DetailedOrder do GestorClient ou de um arquivo de tipos compartilhado
 import type { DetailedOrder } from "./GestorClient";
 import currencyFormat from "@/helpers/currency-format";
 
 interface PrintOrderReceiptProps {
-  order: DetailedOrder | null; // Receber o objeto do pedido completo
+  order: DetailedOrder | null;
 }
 
 const PrintOrderReceipt = ({ order }: PrintOrderReceiptProps) => {
@@ -34,7 +32,6 @@ const PrintOrderReceipt = ({ order }: PrintOrderReceiptProps) => {
     );
   }
 
-  // Componente interno para o conteúdo do recibo
   const ReceiptContent = ({ type }: { type: "kitchen" | "expedition" }) => {
     const customerName =
       (order.isGuestOrder ? order.guestName : order.user?.name) || "N/A";
@@ -118,18 +115,22 @@ const PrintOrderReceipt = ({ order }: PrintOrderReceiptProps) => {
               >
                 <td className="py-1 pr-1 align-top">{item.quantity}x</td>
                 <td className="py-1">
-                  <span className="font-semibold">{item.product.name}</span>
-                  {item.Size && ` (${item.Size.name})`}
-
-                  {item.HalfHalf &&
-                    item.HalfHalf.firstHalf &&
-                    item.HalfHalf.secondHalf && (
+                  {item.HalfHalf ? (
+                    <div>
+                      <span className="font-semibold uppercase">
+                        Pizza tamanho: {item.Size?.name}
+                      </span>
                       <div className="pl-2 text-[10px] text-gray-700">
                         <div>&raquo; 1/2: {item.HalfHalf.firstHalf.name}</div>
                         <div>&raquo; 1/2: {item.HalfHalf.secondHalf.name}</div>
                       </div>
-                    )}
-
+                    </div>
+                  ) : (
+                    <span className="font-semibold">
+                      {item.product.name}
+                      {item.Size && ` (${item.Size.name})`}
+                    </span>
+                  )}
                   {item.orderExtras && item.orderExtras.length > 0 && (
                     <div className="pl-2 text-[10px] text-gray-700">
                       <span className="font-medium">Adicionais:</span>
@@ -204,8 +205,6 @@ const PrintOrderReceipt = ({ order }: PrintOrderReceiptProps) => {
             </div>
           </>
         )}
-        {/* Verifica se existe observação geral do pedido (você precisaria adicionar este campo ao seu model Order no Prisma) */}
-        {/* Exemplo: order.observation && ( ... ) */}
         <hr className="my-2 border-dashed border-black" />
         <p className="text-center text-xs mt-1">Obrigado pela preferência!</p>
         <p className="text-center text-[10px] text-gray-500">
@@ -236,9 +235,8 @@ const PrintOrderReceipt = ({ order }: PrintOrderReceiptProps) => {
         </button>
       </div>
 
-      {/* Conteúdo oculto para impressão */}
       <div style={{ display: "none" }}>
-        {order && ( // Garante que order não é null antes de tentar renderizar
+        {order && (
           <>
             <div ref={kitchenRef}>
               <ReceiptContent type="kitchen" />
